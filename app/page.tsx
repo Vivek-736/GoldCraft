@@ -1,7 +1,11 @@
+import { HeroSection } from "@/components/hero-section";
+import { SiteHeader } from "@/components/site-header";
+
 export default function Home() {
   return (
-    <div className="flex flex-col text-4xl items-center justify-center min-h-screen">
-      GoldCraft
-    </div>
+    <main className="min-h-screen bg-[#fcfcfc] overflow-x-hidden">
+      <SiteHeader />
+      <HeroSection />
+    </main>
   );
 }
