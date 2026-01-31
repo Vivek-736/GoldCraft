@@ -42,22 +42,22 @@ export function SiteHeader() {
                 
                 <div className="absolute top-full left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 -translate-y-2 group-hover:translate-y-0 z-50">
                     <div className="bg-white rounded-xl shadow-xl border border-slate-100 p-2 flex flex-col relative overflow-hidden">
-                        <Link href="/shop/rings" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Rings & Solitaires
                         </Link>
-                        <Link href="/shop/necklaces" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Necklaces & Pendants
                         </Link>
-                        <Link href="/shop/bracelets" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Bracelets & Bangles
                         </Link>
-                        <Link href="/shop/earrings" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Earrings
                         </Link>
-                        <Link href="/shop/nose-rings" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Nose Rings
                         </Link>
-                        <Link href="/shop/custom" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
+                        <Link href="/shop" className="block px-4 py-2 text-sm text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors">
                             Custom Designs
                         </Link>
                     </div>
