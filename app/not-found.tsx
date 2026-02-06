@@ -8,11 +8,11 @@ export default function NotFound() {
       <main className="flex-1 flex flex-col items-center justify-center container mx-auto px-4 pt-24 pb-12">
         <div className="flex flex-col items-center text-center max-w-lg">
           <div className="mb-8 relative">
-            <div className="absolute inset-0 bg-emerald-100 blur-xl rounded-full opacity-50" />
-            <Diamond className="w-16 h-16 text-emerald-900 relative z-10 stroke-1" />
+            <div className="absolute inset-0 bg-amber-100 blur-xl rounded-full opacity-50" />
+            <Diamond className="w-16 h-16 text-amber-900 relative z-10 stroke-1" />
           </div>
 
-          <h1 className="text-9xl font-serif text-emerald-900/10 absolute select-none pointer-events-none -z-10 translate-y-8">
+          <h1 className="text-9xl font-serif text-amber-900/10 absolute select-none pointer-events-none -z-10 translate-y-8">
             404
           </h1>
 
@@ -27,7 +27,7 @@ export default function NotFound() {
           </p>
 
           <Link href="/">
-            <Button className="bg-emerald-900 hover:bg-emerald-800 text-white min-w-50 h-14 rounded-none uppercase tracking-widest text-xs font-bold shadow-lg shadow-emerald-900/20 transition-all cursor-pointer">
+            <Button className="bg-amber-900 hover:bg-amber-800 text-white min-w-50 h-14 rounded-none uppercase tracking-widest text-xs font-bold shadow-lg shadow-amber-900/20 transition-all cursor-pointer">
               Back to Homepage
             </Button>
           </Link>
