@@ -184,7 +184,7 @@ export function HeroSection() {
         <div className="text-center mb-4 md:mb-0 mt-4 md:mt-8 relative z-20">
              <h1 ref={titleRef} className="text-4xl md:text-8xl font-serif text-slate-900 leading-tight">
                 MINDFUL WAY FOR <br />
-                <span className="text-amber-900 block mt-2">CUSTOM JEWELLERY</span>
+                <span className="text-amber-800 block mt-2">CUSTOM JEWELLERY</span>
             </h1>
         </div>
 

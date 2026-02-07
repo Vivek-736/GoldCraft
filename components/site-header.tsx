@@ -68,6 +68,9 @@ export function SiteHeader() {
             <Link href="#discover" className="text-sm font-medium hover:text-amber-700 transition-colors scroll-smooth">
               Discover
             </Link>
+            <Link href="#about" className="text-sm font-medium hover:text-amber-700 transition-colors scroll-smooth">
+              About
+            </Link>
             <Link href="#shop" className="text-sm font-medium hover:text-amber-700 transition-colors scroll-smooth">
               Shop
             </Link>
@@ -96,7 +99,7 @@ export function SiteHeader() {
           <Link href="/login" className="hidden md:block text-sm font-medium hover:text-amber-700 transition-colors">
             Login
           </Link>
-          <Button className="hidden cursor-pointer md:flex bg-amber-900 hover:bg-amber-800 text-white rounded-none px-6">
+          <Button className="hidden cursor-pointer md:flex bg-amber-600 hover:bg-amber-800 text-white rounded-none px-6">
             Sign Up
           </Button>
         </div>
@@ -129,6 +132,13 @@ export function SiteHeader() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Discover
+          </Link>
+          <Link 
+            href="#about" 
+            className="hover:text-amber-700 transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            About
           </Link>
           <Link 
             href="#shop" 
