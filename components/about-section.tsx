@@ -32,48 +32,49 @@ export function AboutSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="flex flex-col gap-8"
+            className="flex flex-col gap-8 justify-center h-full"
           >
             <div className="space-y-4">
               <span className="text-amber-600 font-medium tracking-[0.2em] text-sm uppercase">
-                Our Legacy
+                Our Heritage
               </span>
               <h2 className="text-4xl md:text-5xl font-serif text-slate-900 leading-tight">
-                Crafting Stories in 
-                <br />
-                <span className="text-amber-600">Pure Gold</span>
+                Weaving Dreams in <br />
+                <span className="text-amber-600 italic">Purest Gold</span>
               </h2>
             </div>
 
-            <p className="text-slate-600 text-lg leading-relaxed">
-              Founded on the principles of integrity and artistry, GoldCraft has
-              been defining luxury for generations. We don&apos;t just sell
-              jewellery; we create masterpieces that celebrate life&apos;s most
-              precious moments.
+            <p className="text-slate-600 text-lg leading-relaxed border-l-2 border-amber-600 pl-6">
+              "True luxury is not just about the gleam of gold, but the story it tells."
             </p>
 
-            <div className="grid grid-cols-2 gap-8 text-center md:text-left">
+            <p className="text-slate-500 text-base leading-relaxed">
+              At GoldCraft, we blend centuries-old traditions with modern artistry. 
+              Our artisans don't just shape metal; they breathe life into it. 
+              Each piece is a harmonious symphony of integrity, passion, and precision, 
+              designed to be cherished for generations to come.
+            </p>
+
+            <div className="grid grid-cols-2 gap-8 text-center md:text-left pt-4">
               <div className="space-y-2">
-                <h3 className="text-3xl font-serif text-amber-600">25+</h3>
-                <p className="text-slate-500 text-sm uppercase tracking-wider">
-                  Years of Excellence
+                <h3 className="text-4xl font-serif text-amber-600">30+</h3>
+                <p className="text-slate-500 text-xs uppercase tracking-widest">
+                  Years of Artistry
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="text-3xl font-serif text-amber-600">10k+</h3>
-                <p className="text-slate-500 text-sm uppercase tracking-wider">
-                  Happy Clients
+                <h3 className="text-4xl font-serif text-amber-600">15k+</h3>
+                <p className="text-slate-500 text-xs uppercase tracking-widest">
+                  Stories Created
                 </p>
               </div>
             </div>
 
-            <motion.div
-              className="pt-4"
-            >
-              <button className="px-8 py-3 border-2 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white transition-all font-medium tracking-wide">
-                Learn More About Us
+            <div className="pt-6">
+              <button className="px-10 py-4 bg-transparent border border-amber-900 text-amber-900 hover:bg-amber-900 hover:text-white transition-all duration-300 font-medium tracking-wide rounded-none uppercase text-xs">
+                Discover Our Story
               </button>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </div>
