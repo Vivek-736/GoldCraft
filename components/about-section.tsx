@@ -2,8 +2,15 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export function AboutSection() {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push("/dashboard");
+  };
+
   return (
     <section
       id="about"
@@ -40,19 +47,21 @@ export function AboutSection() {
               </span>
               <h2 className="text-4xl md:text-5xl font-serif text-slate-900 leading-tight">
                 Weaving Dreams in <br />
-                <span className="text-amber-600 italic">Purest Gold</span>
+                <span className="text-amber-600">Purest Gold</span>
               </h2>
             </div>
 
             <p className="text-slate-600 text-lg leading-relaxed border-l-2 border-amber-600 pl-6">
-              "True luxury is not just about the gleam of gold, but the story it tells."
+              &quot;True luxury is not just about the gleam of gold, but the
+              story it tells.&quot;
             </p>
 
             <p className="text-slate-500 text-base leading-relaxed">
-              At GoldCraft, we blend centuries-old traditions with modern artistry. 
-              Our artisans don't just shape metal; they breathe life into it. 
-              Each piece is a harmonious symphony of integrity, passion, and precision, 
-              designed to be cherished for generations to come.
+              At GoldCraft, we blend centuries-old traditions with modern
+              artistry. Our artisans don&apos;t just shape metal; they breathe
+              life into it. Each piece is a harmonious symphony of integrity,
+              passion, and precision, designed to be cherished for generations
+              to come.
             </p>
 
             <div className="grid grid-cols-2 gap-8 text-center md:text-left pt-4">
@@ -69,9 +78,11 @@ export function AboutSection() {
                 </p>
               </div>
             </div>
-
             <div className="pt-6">
-              <button className="px-10 py-4 bg-transparent border border-amber-900 text-amber-900 hover:bg-amber-900 hover:text-white transition-all duration-300 font-medium tracking-wide rounded-none uppercase text-xs">
+              <button
+                onClick={handleClick}
+                className="px-10 py-4 bg-transparent border border-amber-900 text-amber-900 hover:bg-amber-900 hover:text-white transition-all duration-300 font-medium tracking-wide rounded-none uppercase text-xs"
+              >
                 Discover Our Story
               </button>
             </div>
