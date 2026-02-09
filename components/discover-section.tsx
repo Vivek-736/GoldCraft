@@ -5,6 +5,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -15,6 +16,11 @@ export function DiscoverSection() {
   const maskRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push("/dashboard");
+  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -122,7 +128,7 @@ export function DiscoverSection() {
           modern luxury. Every detail tells a story of perfection.
         </p>
         <div className="pt-4">
-          <Button className="bg-amber-600 cursor-pointer hover:bg-amber-700 text-white border-none rounded-full px-8 py-6 text-lg transition-all duration-300 shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)]">
+          <Button onClick={handleClick} className="bg-amber-600 cursor-pointer hover:bg-amber-700 text-white border-none rounded-full px-8 py-6 text-lg transition-all duration-300 shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)]">
             Explore Collection
           </Button>
         </div>

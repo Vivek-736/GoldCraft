@@ -34,38 +34,50 @@ export function ShopSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-8 bg-white rounded-3xl shadow-xl overflow-hidden min-h-125 border border-slate-100 p-12 flex flex-col justify-center items-center relative">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-amber-50/50 via-transparent to-transparent opacity-60 pointer-events-none" />
-            
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.9 }}
-               whileInView={{ opacity: 1, scale: 1 }}
-               transition={{ duration: 0.8 }}
-               className="text-center space-y-8 max-w-2xl relative z-10"
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              className="text-center space-y-8 max-w-2xl relative z-10"
             >
-                <div className="inline-block p-4 rounded-full bg-amber-50 mb-4">
-                    <Gem className="w-12 h-12 text-amber-600" />
+              <div className="inline-block p-4 rounded-full bg-amber-50 mb-4">
+                <Gem className="w-12 h-12 text-amber-600" />
+              </div>
+
+              <h3 className="text-3xl md:text-5xl font-serif text-slate-900 leading-tight">
+                &quot;More than jewelry. It&apos;s an heirloom.&quot;
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-slate-100 mt-8">
+                <div className="flex flex-col items-center gap-3">
+                  <Award className="w-6 h-6 text-amber-600" />
+                  <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">
+                    Master Crafted
+                  </span>
+                  <p className="text-xs text-slate-500">
+                    Hand-finished by artisans with decades of experience
+                  </p>
                 </div>
-                
-                <h3 className="text-3xl md:text-5xl font-serif text-slate-900 leading-tight">
-                    &quot;More than jewelry. It&apos;s an heirloom.&quot;
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-slate-100 mt-8">
-                     <div className="flex flex-col items-center gap-3">
-                        <Award className="w-6 h-6 text-amber-600" />
-                        <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">Master Crafted</span>
-                        <p className="text-xs text-slate-500">Hand-finished by artisans with decades of experience</p>
-                     </div>
-                     <div className="flex flex-col items-center gap-3">
-                        <ShieldCheck className="w-6 h-6 text-amber-600" />
-                        <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">Lifetime Warranty</span>
-                        <p className="text-xs text-slate-500">Guaranteed quality that lasts for generations</p>
-                     </div>
-                     <div className="flex flex-col items-center gap-3">
-                        <Gem className="w-6 h-6 text-amber-600" />
-                        <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">Purest Gold</span>
-                        <p className="text-xs text-slate-500">Certified 24K gold sourced responsibly</p>
-                     </div>
+                <div className="flex flex-col items-center gap-3">
+                  <ShieldCheck className="w-6 h-6 text-amber-600" />
+                  <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">
+                    Lifetime Warranty
+                  </span>
+                  <p className="text-xs text-slate-500">
+                    Guaranteed quality that lasts for generations
+                  </p>
                 </div>
+                <div className="flex flex-col items-center gap-3">
+                  <Gem className="w-6 h-6 text-amber-600" />
+                  <span className="text-sm font-medium text-slate-900 uppercase tracking-widest">
+                    Purest Gold
+                  </span>
+                  <p className="text-xs text-slate-500">
+                    Certified 24K gold sourced responsibly
+                  </p>
+                </div>
+              </div>
             </motion.div>
           </div>
 
@@ -101,20 +113,16 @@ export function ShopSection() {
                 </div>
               </div>
 
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
+              <motion.div>
                 <Button
                   onClick={handleAddToCart}
-                  className="w-full bg-amber-900 hover:bg-amber-800 text-white py-8 rounded-2xl text-lg font-medium flex items-center justify-center gap-3 shadow-xl shadow-amber-900/20 transition-all cursor-pointer"
+                  className="w-full bg-amber-900 hover:bg-amber-800 text-white py-8 rounded-2xl text-lg font-medium flex items-center justify-center gap-3 shadow-xl shadow-amber-900/20 cursor-pointer"
                 >
                   <ShoppingCart className="w-6 h-6" />
                   Purchase Now — ₹4,22,499
                 </Button>
               </motion.div>
             </div>
-
             <p className="text-slate-400 text-xs text-center flex items-center justify-center gap-1">
               Secured Delivery • Hallmarked Certified
             </p>

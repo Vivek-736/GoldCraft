@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -12,9 +12,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
 export function SiteHeader() {
+  const router = useRouter();
+  const { isSignedIn } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleClick = () => {
+    router.push("/dashboard/cart");
+  };
 
   return (
     <>
@@ -123,7 +131,10 @@ export function SiteHeader() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="p-2 hover:bg-amber-50 rounded-full transition-colors text-slate-700 hover:text-amber-900">
+                <button
+                  onClick={handleClick}
+                  className="p-2 cursor-pointer hover:bg-amber-50 rounded-full transition-colors text-slate-700 hover:text-amber-900"
+                >
                   <ShoppingBag className="w-5 h-5" />
                 </button>
               </TooltipTrigger>
@@ -135,15 +146,28 @@ export function SiteHeader() {
 
           <div className="hidden md:block h-4 w-px bg-slate-200 mx-2" />
 
-          <Link
-            href="/login"
-            className="hidden md:block text-sm font-medium hover:text-amber-700 transition-colors"
-          >
-            Login
-          </Link>
-          <Button className="hidden cursor-pointer md:flex bg-amber-600 hover:bg-amber-800 text-white rounded-none px-6">
-            Sign Up
-          </Button>
+          {isSignedIn ? (
+            <Button
+              onClick={() => router.push("/dashboard")}
+              className="hidden md:flex bg-amber-800 hover:bg-amber-900 text-white rounded-none px-6 cursor-pointer"
+            >
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hidden md:block text-sm font-medium hover:text-amber-700 transition-colors"
+              >
+                Login
+              </Link>
+              <Link href="/sign-up">
+                <Button className="hidden cursor-pointer md:flex bg-amber-800 hover:bg-amber-900 text-white rounded-none px-6">
+                  Sign Up
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -218,17 +242,35 @@ export function SiteHeader() {
 
           <div className="h-px bg-slate-100 my-2" />
 
-          <Link
-            href="/login"
-            className="hover:text-amber-700 transition-colors"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Login
-          </Link>
-
-          <Button className="w-full cursor-pointer bg-amber-900 hover:bg-amber-800 text-white">
-            Sign Up
-          </Button>
+          {isSignedIn ? (
+            <Button
+              className="w-full cursor-pointer bg-amber-900 hover:bg-amber-800 text-white"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                router.push("/dashboard");
+              }}
+            >
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hover:text-amber-700 text-center transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
+              <Link
+                href={"/sign-up"}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Button className="w-full cursor-pointer bg-amber-900 hover:bg-amber-800 text-white">
+                  Sign Up
+                </Button>
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </>
