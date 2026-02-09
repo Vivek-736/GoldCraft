@@ -119,7 +119,7 @@ export function ShopSection() {
                   className="w-full bg-amber-900 hover:bg-amber-800 text-white py-8 rounded-2xl text-lg font-medium flex items-center justify-center gap-3 shadow-xl shadow-amber-900/20 cursor-pointer"
                 >
                   <ShoppingCart className="w-6 h-6" />
-                  Purchase Now — ₹4,22,499
+                  Purchase Now — ₹1,22,499
                 </Button>
               </motion.div>
             </div>
