@@ -36,7 +36,7 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
               alt="GoldCraft"
               width={180}
               height={40}
-              className="opacity-90 rounded-xl border-4 border-amber-600"
+              className="opacity-90 rounded-xl border-4 shadow-amber-200 shadow-lg border-amber-300 bg-amber-50/30 backdrop-blur-sm"
             />
           </motion.div>
 
