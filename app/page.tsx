@@ -1,7 +1,7 @@
 import { HeroSection } from "@/components/hero-section";
 import { DiscoverSection } from "@/components/discover-section";
 import { AboutSection } from "@/components/about-section";
-import { ShopSection } from "@/components/shop-section";
+import { FaqSection } from "@/components/faq-section";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -12,7 +12,7 @@ export default function Home() {
       <HeroSection />
       <AboutSection />
       <DiscoverSection />
-      <ShopSection />
+      <FaqSection />
       <SiteFooter />
     </main>
   );

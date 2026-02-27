@@ -8,7 +8,12 @@ import Link from "next/link";
 const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen w-full bg-white flex flex-col md:flex-row overflow-hidden selection:bg-stone-100">
-      <div className="relative hidden md:flex md:w-1/2 lg:w-[55%] h-screen items-center justify-center overflow-hidden bg-stone-50">
+      <div
+        className="relative hidden md:flex md:w-1/2 lg:w-[55%] h-screen items-center justify-center overflow-hidden bg-stone-50"
+        style={{
+          clipPath: "polygon(0 0, 100% 0, 85% 100%, 0% 100%)" 
+        }}
+      >
         <motion.div
           initial={{ scale: 1.05, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -16,12 +21,13 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
           className="absolute inset-0 z-0"
         >
           <Image
-            src="https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop"
-            alt="Luxury Silk Texture"
+            src="/auth_cartoon_bg.png"
+            alt="Animated Luxury Jewelry"
             fill
-            className="object-cover opacity-90"
+            className="object-cover opacity-95"
             priority
           />
+          
           <div className="absolute inset-0 bg-linear-to-r from-white/40 via-transparent to-white/10" />
           <div className="absolute inset-0 bg-stone-900/10 mix-blend-multiply" />
         </motion.div>
@@ -48,31 +54,12 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 1 }}
-              className="text-4xl lg:text-6xl font-serif text-stone-900 leading-[1.1]"
+              className="text-2xl lg:text-4xl font-serif text-stone-950 leading-[1.1]"
             >
-              Timeless Elegance, <br />
-              <span className="text-stone-500">Redefined.</span>
+              Timeless Elegance,
+              <span className="text-white">Redefined.</span>
             </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.9, duration: 1 }}
-              className="text-stone-600 text-lg font-light tracking-wide"
-            >
-              Enter the world of bespoke craftsmanship. Exclusive access to our curated design vault awaits.
-            </motion.p>
           </div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 1 }}
-            className="flex items-center gap-6 text-xs tracking-widest text-white uppercase font-medium"
-          >
-            <span>Est. 2026</span>
-            <div className="w-12 h-px bg-stone-300" />
-            <span>Vizag • Guntur • Vijayawada</span>
-          </motion.div>
         </div>
       </div>
 
@@ -88,7 +75,6 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
             height={30}
           />
         </Link>
-
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
