@@ -56,37 +56,37 @@ export function SiteHeader() {
               <div className="absolute top-full left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 -translate-y-2 group-hover:translate-y-0 z-50">
                 <div className="bg-white rounded-xl shadow-xl border border-slate-100 p-2 flex flex-col relative overflow-hidden">
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Rings & Solitaires
                   </Link>
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Necklaces & Pendants
                   </Link>
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Bracelets & Bangles
                   </Link>
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Earrings
                   </Link>
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Nose Rings
                   </Link>
                   <Link
-                    href="#shop"
+                    href="#faq"
                     className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
                   >
                     Custom Designs
@@ -107,15 +107,15 @@ export function SiteHeader() {
               About
             </Link>
             <Link
-              href="#shop"
+              href="#faq"
               className="text-sm font-medium hover:text-amber-700 transition-colors scroll-smooth"
             >
-              Shop
+              FAQs
             </Link>
           </nav>
         </div>
 
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white py-4 px-6">
           <Link href="/">
             <Image
               src="/AppName.png"
@@ -189,28 +189,28 @@ export function SiteHeader() {
             <p className="mb-4 text-amber-900 font-bold">Products</p>
             <div className="grid grid-cols-2 gap-4 text-base pl-2">
               <Link
-                href="#shop"
+                href="#faq"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-slate-600"
               >
                 Rings
               </Link>
               <Link
-                href="#shop"
+                href="#faq"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-slate-600"
               >
                 Necklaces
               </Link>
               <Link
-                href="#shop"
+                href="#faq"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-slate-600"
               >
                 Bracelets
               </Link>
               <Link
-                href="#shop"
+                href="#faq"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-slate-600"
               >
@@ -233,11 +233,11 @@ export function SiteHeader() {
             About
           </Link>
           <Link
-            href="#shop"
+            href="#faq"
             className="hover:text-amber-700 transition-colors"
             onClick={() => setIsMobileMenuOpen(false)}
           >
-            Shop
+            FAQs
           </Link>
 
           <div className="h-px bg-slate-100 my-2" />

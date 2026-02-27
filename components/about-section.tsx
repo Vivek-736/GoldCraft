@@ -23,10 +23,10 @@ export function AboutSection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative h-100 md:h-150 rounded-2xl overflow-hidden shadow-2xl"
+            className="relative h-100 md:h-140 rounded-2xl overflow-hidden shadow-2xl"
           >
             <Image
-              src="/discover.jpg"
+              src="/gold.jpg"
               alt="Our Craftsmanship"
               fill
               className="object-cover"
