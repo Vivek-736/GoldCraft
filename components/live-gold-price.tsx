@@ -36,7 +36,7 @@ export function LiveGoldPrice() {
     };
 
     useEffect(() => {
-        if (isOpen && !priceData) {
+        if (isOpen) {
             fetchPrice();
         }
     }, [isOpen]);
@@ -61,11 +61,11 @@ export function LiveGoldPrice() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-md bg-white border border-amber-100 shadow-xl rounded-2xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-2xl font-serif tracking-wide text-stone-900">
+                    <DialogTitle className="flex justify-center items-center gap-2 text-2xl font-serif tracking-wide text-stone-900">
                         <TrendingUp className="w-6 h-6 text-amber-500" />
                         Live Spot Price
                     </DialogTitle>
-                    <DialogDescription className="text-stone-500">
+                    <DialogDescription className="text-stone-500 text-center">
                         Current global spot price for 24K Gold converted to Indian Rupees (INR).
                     </DialogDescription>
                 </DialogHeader>
@@ -93,24 +93,24 @@ export function LiveGoldPrice() {
                     ) : priceData ? (
                         <div className="w-full px-6 relative z-10">
                             <div className="flex flex-col items-center mb-6">
-                                <span className="text-stone-400 text-xs font-semibold uppercase tracking-widest mb-1">Per 10 Grams (24K)</span>
-                                <span className="text-4xl md:text-5xl font-serif text-amber-600 tracking-tight">
+                                <span className="text-stone-600 text-xs font-semibold uppercase tracking-widest mb-1">Per 10 Grams (24K)</span>
+                                <span className="text-4xl md:text-5xl text-amber-600 tracking-tight">
                                     {formatCurrency(priceData.tenGram)}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 w-full">
                                 <div className="bg-white p-3 rounded-lg border border-stone-100 text-center shadow-sm">
-                                    <span className="block text-stone-400 text-[10px] uppercase tracking-widest mb-1">Per Gram</span>
+                                    <span className="block text-stone-600 text-[10px] uppercase tracking-widest mb-1">Per Gram</span>
                                     <span className="text-lg font-medium text-stone-700">{formatCurrency(priceData.gram)}</span>
                                 </div>
                                 <div className="bg-white p-3 rounded-lg border border-stone-100 text-center shadow-sm">
-                                    <span className="block text-stone-400 text-[10px] uppercase tracking-widest mb-1">Per Ounce</span>
+                                    <span className="block text-stone-600 text-[10px] uppercase tracking-widest mb-1">Per Ounce</span>
                                     <span className="text-lg font-medium text-stone-700">{formatCurrency(priceData.ounce)}</span>
                                 </div>
                             </div>
 
-                            <p className="text-center text-[10px] text-stone-400 mt-6 max-w-xs mx-auto">
+                            <p className="text-center text-sm text-stone-900 mt-6 max-w-xs mx-auto">
                                 Prices are indicative spot rates and may not include local taxes, import duties, or making charges.
                             </p>
                         </div>

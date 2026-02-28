@@ -3,7 +3,7 @@
 export async function getLiveGoldPriceINR() {
     try {
         const goldResponse = await fetch("https://api.gold-api.com/price/XAU", {
-            next: { revalidate: 60 }
+            cache: 'no-store'
         });
 
         if (!goldResponse.ok) {
@@ -20,7 +20,7 @@ export async function getLiveGoldPriceINR() {
             throw new Error("Failed to fetch exchange rate");
         }
         const fxData = await fxResponse.json();
-        
+
         const usdToInr = fxData.rates.INR;
         const ouncePriceINR = priceUSD * usdToInr;
         const gramPriceINR = ouncePriceINR / 31.1034768;
