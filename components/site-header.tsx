@@ -1,17 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { LiveGoldPrice } from "@/components/live-gold-price";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 
@@ -19,10 +14,6 @@ export function SiteHeader() {
   const router = useRouter();
   const { isSignedIn } = useUser();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const handleClick = () => {
-    router.push("/dashboard/cart");
-  };
 
   return (
     <>
@@ -114,7 +105,6 @@ export function SiteHeader() {
             </Link>
           </nav>
         </div>
-
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white py-4 px-6">
           <Link href="/">
             <Image
@@ -128,21 +118,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleClick}
-                  className="p-2 cursor-pointer hover:bg-amber-50 rounded-full transition-colors text-slate-700 hover:text-amber-900"
-                >
-                  <ShoppingBag className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cart</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <LiveGoldPrice />
 
           <div className="hidden md:block h-4 w-px bg-slate-200 mx-2" />
 
