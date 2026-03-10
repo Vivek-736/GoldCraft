@@ -96,6 +96,7 @@ export function DiscoverSection() {
       id="discover"
       ref={sectionRef}
       className="relative w-full h-screen bg-white overflow-hidden flex items-center justify-center"
+      style={{ willChange: "transform" }}
     >
       <div className="absolute inset-0 z-0 bg-white" />
 
