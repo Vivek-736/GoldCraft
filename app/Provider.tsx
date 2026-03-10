@@ -20,6 +20,7 @@ function Provider( { children }: { children: React.ReactNode } ) {
             name: user?.fullName,
             email: user?.primaryEmailAddress?.emailAddress,
             imageUrl: user?.imageUrl,
+            phoneNumber: user?.primaryPhoneNumber?.phoneNumber ?? null,
         });
         setUserDetail(result.data);
     }
