@@ -24,7 +24,7 @@ export function HeroSection() {
   const [stoneColor, setStoneColor] = useState("#ff0000");
   const router = useRouter();
   const stoneMaterialRef = useRef<any>(null);
-  const originalImageRef = useRef<HTMLImageElement | ImageBitmap | null>(null);
+  const originalPixelDataRef = useRef<{ data: Uint8ClampedArray; w: number; h: number } | null>(null);
   const originalTexRef = useRef<THREE.Texture | null>(null);
 
   const handleClick = () => {
@@ -59,6 +59,7 @@ export function HeroSection() {
         canvasRef.current!.clientWidth,
         canvasRef.current!.clientHeight,
       );
+      
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.5;
       renderer.shadowMap.enabled = true;
@@ -129,8 +130,22 @@ export function HeroSection() {
 
                 if (mat.map?.image && !stoneMaterialRef.current) {
                   stoneMaterialRef.current = mat;
-                  originalImageRef.current = mat.map.image;
                   originalTexRef.current = mat.map;
+
+                  const img = mat.map.image as HTMLImageElement | ImageBitmap;
+                  const w = (img as HTMLImageElement).naturalWidth || (img as ImageBitmap).width || 1024;
+                  const h = (img as HTMLImageElement).naturalHeight || (img as ImageBitmap).height || 1024;
+                  const tmpCanvas = document.createElement("canvas");
+                  tmpCanvas.width = w;
+                  tmpCanvas.height = h;
+                  const tmpCtx = tmpCanvas.getContext("2d")!;
+                  tmpCtx.drawImage(img as CanvasImageSource, 0, 0);
+                  try {
+                    const imgData = tmpCtx.getImageData(0, 0, w, h);
+                    originalPixelDataRef.current = { data: imgData.data, w, h };
+                  } catch {
+                    // CORS guard — canvas readback failed, color change will be unavailable
+                  }
                 }
               }
             }
@@ -233,42 +248,33 @@ export function HeroSection() {
 
   useEffect(() => {
     const mat = stoneMaterialRef.current;
-    const img = originalImageRef.current;
+    const cached = originalPixelDataRef.current;
     const origTex = originalTexRef.current;
-    if (!mat || !img) return;
+    if (!mat || !cached) return;
 
-    const canvas = document.createElement("canvas");
-    const w = (img as HTMLImageElement).naturalWidth || (img as ImageBitmap).width || 1024;
-    const h = (img as HTMLImageElement).naturalHeight || (img as ImageBitmap).height || 1024;
-    canvas.width = w;
-    canvas.height = h;
-    const c2d = canvas.getContext("2d")!;
-    c2d.drawImage(img as CanvasImageSource, 0, 0);
-
-    let imageData: ImageData;
-    try {
-      imageData = c2d.getImageData(0, 0, w, h);
-    } catch {
-      return;
-    }
-
-    const data = imageData.data;
+    const { data: origData, w, h } = cached;
+    const workingData = new Uint8ClampedArray(origData);
     const tc = new THREE.Color(stoneColor);
 
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i] / 255;
-      const g = data[i + 1] / 255;
-      const b = data[i + 2] / 255;
+    for (let i = 0; i < workingData.length; i += 4) {
+      const r = workingData[i] / 255;
+      const g = workingData[i + 1] / 255;
+      const b = workingData[i + 2] / 255;
       if (r > 0.35 && r > g * 1.4 && r > b * 1.4) {
         const luma = 0.299 * r + 0.587 * g + 0.114 * b;
         const factor = Math.min(2.5, luma * 3);
-        data[i] = Math.min(255, Math.round(tc.r * factor * 255));
-        data[i + 1] = Math.min(255, Math.round(tc.g * factor * 255));
-        data[i + 2] = Math.min(255, Math.round(tc.b * factor * 255));
+        workingData[i] = Math.min(255, Math.round(tc.r * factor * 255));
+        workingData[i + 1] = Math.min(255, Math.round(tc.g * factor * 255));
+        workingData[i + 2] = Math.min(255, Math.round(tc.b * factor * 255));
       }
     }
 
-    c2d.putImageData(imageData, 0, 0);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const c2d = canvas.getContext("2d")!;
+    c2d.putImageData(new ImageData(workingData, w, h), 0, 0);
+
     const newTex = new THREE.CanvasTexture(canvas);
     if (origTex) {
       newTex.wrapS = origTex.wrapS;
