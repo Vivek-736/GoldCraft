@@ -21,18 +21,18 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
           className="absolute inset-0 z-0"
         >
           <Image
-            src="/auth_cartoon_bg.png"
+            src="/auth.jpg"
             alt="Animated Luxury Jewelry"
             fill
             className="object-cover opacity-95"
             priority
           />
           
-          <div className="absolute inset-0 bg-linear-to-r from-white/40 via-transparent to-white/10" />
-          <div className="absolute inset-0 bg-stone-900/10 mix-blend-multiply" />
+          <div className="absolute inset-0" />
+          <div className="absolute inset-0 mix-blend-multiply" />
         </motion.div>
 
-        <div className="relative z-10 w-full h-full flex flex-col justify-between p-12 lg:p-20">
+        <div className="relative z-10 w-full h-full flex flex-col items-center -mt-10 p-12 lg:p-20">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -48,18 +48,6 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
               />
             </Link>
           </motion.div>
-
-          <div className="space-y-8 max-w-lg">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 1 }}
-              className="text-2xl lg:text-4xl font-serif text-stone-950 leading-[1.1]"
-            >
-              Timeless Elegance,
-              <span className="text-white">Redefined.</span>
-            </motion.h2>
-          </div>
         </div>
       </div>
 
