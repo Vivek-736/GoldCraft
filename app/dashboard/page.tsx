@@ -1,16 +1,18 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import {
   ArrowRight,
   BadgeIndianRupee,
   MessageSquareText,
   Palette,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Card, CardContent } from "@/components/ui/card";
+import { isAdminEmail } from "@/lib/admin";
 
 const quickLinkGroups = [
   {
@@ -41,6 +43,7 @@ const quickLinkGroups = [
       },
     ],
   },
+  
   {
     title: "Decide & Manage",
     description:
@@ -78,18 +81,35 @@ export default async function DashboardPage() {
     return redirectToSignIn();
   }
 
+  const user = await currentUser();
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+  const isAdmin = isAdminEmail(primaryEmail);
+
   return (
     <DashboardShell
       showNav
       eyebrow="GoldCraft Dashboard"
       title="Quiet luxury for your next gold creation."
       description="A refined starting point for custom jewellery, AI-guided design, gold-only conversations, thoughtful gold investment, and the pieces you plan to take forward."
+      headerAction={
+        <Link
+          href={isAdmin ? "/admin" : "/dashboard/profile"}
+          className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition-colors duration-300 ${
+            isAdmin
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          {isAdmin ? "Admin" : "User"}
+        </Link>
+      }
     >
       <div className="grid gap-4 lg:grid-cols-2">
         {quickLinkGroups.map((group) => (
           <Card
             key={group.title}
-            className="border-amber-200 bg-white/95 shadow-[0_18px_55px_rgba(217,119,6,0.07)]"
+            className="border-amber-200"
           >
             <CardContent className="px-4 py-4 md:px-5 md:py-4">
               <h2 className="text-xl font-semibold text-slate-900 md:text-2xl">
