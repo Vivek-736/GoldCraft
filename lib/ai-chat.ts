@@ -259,12 +259,199 @@ function includesAny(text: string, words: string[]) {
   return words.some((word) => text.includes(word));
 }
 
-function normalizeAssistantText(text: string) {
+type ResponseCategory = keyof typeof CATEGORY_DOMAINS | "general";
+
+const HTML_RESPONSE_RULES = `Return valid HTML only.
+Allowed tags: <section>, <div>, <h3>, <h4>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <a>, <br>.
+Do not use markdown.
+Do not wrap the answer in <html>, <body>, or code fences.
+Do not add inline styles or class names.
+Keep the response concise, polished, and easy to scan.`;
+
+const CATEGORY_RESPONSE_TEMPLATES: Record<ResponseCategory, string> = {
+  financial: `Use 2 or 3 <section> blocks with this style:
+<section><h3>Market Snapshot</h3><p>Short pulse on price direction and sentiment.</p></section>
+<section><h3>Key Signals</h3><ul><li>2 to 4 crisp signals.</li></ul></section>
+<section><h3>What To Watch</h3><p>One short next-step line.</p></section>
+Keep it practical and market-aware.`,
+  design: `Use 2 or 3 <section> blocks with this style:
+<section><h3>Design Direction</h3><p>The overall visual angle.</p></section>
+<section><h3>Standout Cues</h3><ul><li>2 to 4 visual cues or patterns.</li></ul></section>
+<section><h3>What To Borrow</h3><p>A short takeaway for execution.</p></section>
+Keep it tasteful, visual, and selective.`,
+  news: `Use 2 or 3 <section> blocks with this style:
+<section><h3>What Happened</h3><p>The key development in one short paragraph.</p></section>
+<section><h3>Why It Matters</h3><ul><li>2 to 4 implications.</li></ul></section>
+<section><h3>Watch Next</h3><p>One short line on what may follow.</p></section>
+Keep it current and decisive.`,
+  startup: `Use 2 or 3 <section> blocks with this style:
+<section><h3>Startup Pulse</h3><p>The short overall take.</p></section>
+<section><h3>Names To Notice</h3><ul><li>2 to 4 notable companies or signals.</li></ul></section>
+<section><h3>Why It Matters</h3><p>A short conclusion on opportunity or relevance.</p></section>
+Avoid long company dumps. Explain why the names matter.`,
+  images: `If text is necessary, return exactly one <section><p>Short note only.</p></section>. Do not include links, lists, or extra explanation.`,
+  developer: `Use 2 or 3 <section> blocks with this style:
+<section><h3>Best Fit</h3><p>The strongest answer in one short paragraph.</p></section>
+<section><h3>Useful Picks</h3><ul><li>2 to 4 tools, libraries, repos, or models.</li></ul></section>
+<section><h3>Implementation Note</h3><p>One short practical suggestion.</p></section>
+Keep it technical and selective.`,
+  general: `Use 2 or 3 <section> blocks with this style:
+<section><h3>Quick Take</h3><p>The answer in one short paragraph.</p></section>
+<section><h3>Key Points</h3><ul><li>2 to 4 crisp points.</li></ul></section>
+<section><h3>Next Move</h3><p>One short suggestion if helpful.</p></section>
+Keep it direct and elegant.`,
+};
+
+function escapeHtml(text: string) {
   return text
-    .replace(/\r\n/g, "\n")
-    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function stripHtmlForModelText(text: string) {
+  return text
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|section|li|h3|h4|ul|ol)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function plainTextToHtml(text: string) {
+  const cleaned = text
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`/g, "")
+    .trim();
+
+  if (!cleaned) {
+    return "<section><p>I couldn't produce a response just now.</p></section>";
+  }
+
+  const blocks = cleaned
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.every((line) => /^[-*]\s+/.test(line))) {
+        return `<section><ul>${lines
+          .map((line) => `<li>${escapeHtml(line.replace(/^[-*]\s+/, ""))}</li>`)
+          .join("")}</ul></section>`;
+      }
+
+      if (lines.every((line) => /^\d+\.\s+/.test(line))) {
+        return `<section><ol>${lines
+          .map(
+            (line) => `<li>${escapeHtml(line.replace(/^\d+\.\s+/, ""))}</li>`,
+          )
+          .join("")}</ol></section>`;
+      }
+
+      return `<section><p>${escapeHtml(lines.join(" "))}</p></section>`;
+    });
+
+  return blocks.join("");
+}
+
+function normalizeAssistantHtml(text: string, fallback: string) {
+  const cleaned = text
+    .replace(/```html/gi, "")
+    .replace(/```/g, "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+
+  if (!cleaned) {
+    return fallback;
+  }
+
+  if (!/<\/?[a-z][\s\S]*>/i.test(cleaned)) {
+    return plainTextToHtml(cleaned);
+  }
+
+  return cleaned
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<\/?(html|body|head|meta)[^>]*>/gi, "")
+    .trim();
+}
+
+function buildFallbackHtml(category: ResponseCategory, query: string) {
+  if (category === "images") {
+    return "<section><p>I could not find a strong direct image match for that request yet.</p></section>";
+  }
+
+  return `<section><h3>Quick Take</h3><p>${escapeHtml(
+    `I couldn't prepare a polished answer for "${query}" just now. Please try once more.`,
+  )}</p></section>`;
+}
+
+function buildCategoryPrompt({
+  category,
+  query,
+  contextText,
+}: {
+  category: ResponseCategory;
+  query: string;
+  contextText?: string;
+}) {
+  return contextText
+    ? `User query: ${query}
+
+Selected web context:
+${contextText}
+
+${HTML_RESPONSE_RULES}
+
+${CATEGORY_RESPONSE_TEMPLATES[category]}
+
+Use only the strongest facts from the selected web context. Synthesize them cleanly. Do not copy raw snippets, navigation text, footer text, or long unbroken lists.`
+    : `User query: ${query}
+
+${HTML_RESPONSE_RULES}
+
+${CATEGORY_RESPONSE_TEMPLATES[category]}
+
+Answer directly and elegantly.`;
+}
+
+async function safeGeminiReply({
+  query,
+  history,
+  category,
+  contextText,
+}: {
+  query: string;
+  history: Array<{ role: ChatRole; content: string }>;
+  category: ResponseCategory;
+  contextText?: string;
+}) {
+  try {
+    return await geminiReply({
+      query,
+      history,
+      category,
+      contextText,
+    });
+  } catch (error) {
+    console.error("GoldCraft Gemini reply failed", error);
+    return buildFallbackHtml(category, query);
+  }
 }
 
 function cleanScrapedContent(text?: string) {
@@ -343,6 +530,7 @@ function choosePrimaryDomain({
     if (includesAny(query, ["tech", "startup", "product launch"])) {
       return "techcrunch.com";
     }
+    
     return "www.reuters.com";
   }
 
@@ -836,7 +1024,10 @@ async function geminiTextRequest({
   );
 
   if (!response.ok) {
-    throw new Error("Gemini request failed.");
+    const errorText = await response.text();
+    throw new Error(
+      `Gemini request failed (${response.status} ${response.statusText}): ${errorText.slice(0, 600)}`,
+    );
   }
 
   const data = await response.json();
@@ -852,10 +1043,12 @@ async function geminiTextRequest({
 async function geminiReply({
   query,
   history,
+  category,
   contextText,
 }: {
   query: string;
   history: Array<{ role: ChatRole; content: string }>;
+  category: ResponseCategory;
   contextText?: string;
 }) {
   const contents: Array<{
@@ -863,30 +1056,30 @@ async function geminiReply({
     parts: Array<{ text: string }>;
   }> = history.slice(-8).map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
-    parts: [{ text: message.content }],
+    parts: [{ text: stripHtmlForModelText(message.content) }],
   }));
 
   contents.push({
     role: "user",
     parts: [
       {
-        text: contextText
-          ? `User query: ${query}\n\nSelected web context:\n${contextText}\n\nRespond with this shape:\nQuick take: one short paragraph.\nKey points: 2 to 4 short bullets or numbered items.\nIf helpful, add one short final line with what to do next.\nDo not copy raw snippets, headers, navigation, or footer text.`
-          : `User query: ${query}\n\nRespond with this shape:\nQuick take: one short paragraph.\nKey points: 2 to 4 short bullets or numbered items.\nIf helpful, add one short final line with what to do next.`,
+        text: buildCategoryPrompt({
+          category,
+          query,
+          contextText,
+        }),
       },
     ],
   });
 
-  const text = await geminiTextRequest({
+  const html = await geminiTextRequest({
     systemPrompt: GOLD_SYSTEM_PROMPT,
     contents,
     maxOutputTokens: 700,
     temperature: 0.28,
   });
 
-  return normalizeAssistantText(
-    text || "I couldn't produce a response just now.",
-  );
+  return normalizeAssistantHtml(html || "", buildFallbackHtml(category, query));
 }
 
 export async function generateChatSummary(query: string) {
@@ -930,7 +1123,11 @@ export async function buildAssistantReply({
   const strategy = chooseToolMode(query);
 
   if (strategy.mode === "gemini") {
-    const content = await geminiReply({ query, history });
+    const content = await safeGeminiReply({
+      query,
+      history,
+      category: strategy.category,
+    });
     return {
       content,
       images: [],
@@ -967,29 +1164,31 @@ export async function buildAssistantReply({
     : [];
 
   if (strategy.mode === "tavily") {
-    if (strategy.category === "images" || strategy.category === "design") {
+    if (strategy.category === "images") {
       return {
-        content:
-          strategy.category === "images" && !images.length
-            ? "I could not find a strong direct image match for that request yet."
-            : "",
+        content: images.length ? "" : buildFallbackHtml("images", query),
         images,
-        sources: strategy.category === "images" ? [] : sources,
+        sources: [],
         mode: "tavily",
         category: strategy.category,
       };
     }
 
-    const content = sources.length
-      ? normalizeAssistantText(
-          sources
-            .map(
-              (item, index) =>
-                `${index + 1}. ${item.title}\n${item.content ?? "No summary available."}`,
-            )
-            .join("\n\n"),
-        )
-      : "I could not find strong live results for that query.";
+    const contextText = sources.length
+      ? sources
+          .map(
+            (item, index) =>
+              `[${index + 1}] ${item.title}\n${item.content ?? "No summary available."}\n${item.url}`,
+          )
+          .join("\n\n")
+      : undefined;
+
+    const content = await safeGeminiReply({
+      query,
+      history,
+      category: strategy.category,
+      contextText,
+    });
 
     return {
       content,
@@ -1007,9 +1206,14 @@ export async function buildAssistantReply({
             `[${index + 1}] ${item.title}\n${item.content ?? "No summary available."}\n${item.url}`,
         )
         .join("\n\n")
-    : "No Tavily sources were returned.";
+    : undefined;
 
-  const content = await geminiReply({ query, history, contextText });
+  const content = await safeGeminiReply({
+    query,
+    history,
+    category: strategy.category,
+    contextText,
+  });
 
   return {
     content,
