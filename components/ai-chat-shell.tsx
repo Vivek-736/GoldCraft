@@ -151,7 +151,7 @@ export function AIChatShell({
           <Button
             onClick={createNewChat}
             disabled={isCreating}
-            className="mt-3 h-11 w-full rounded-2xl bg-amber-800 text-white hover:bg-amber-900"
+            className="mt-3 h-11 cursor-pointer w-full rounded-2xl bg-amber-800 text-white hover:bg-amber-900"
           >
             {isCreating ? (
               <>

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -32,15 +31,58 @@ export type ChatMessageView = {
   animate?: boolean;
 };
 
-function stripMarkdownForTyping(text: string) {
+function isHtmlContent(text: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(text);
+}
+
+function escapeHtml(text: string) {
   return text
-    .replace(/^#{1,6}\s*/gm, "")
-    .replace(/\*\*/g, "")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/`/g, "")
-    .replace(/^\s*[-*]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .trim();
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function decodeBasicEntities(text: string) {
+  return text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripFormattedContentForTyping(text: string) {
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (isHtmlContent(normalized)) {
+    return decodeBasicEntities(
+      normalized
+        .replace(/<li\b[^>]*>/gi, "• ")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/(p|div|section|li|h3|h4|ul|ol)>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim(),
+    );
+  }
+
+  return decodeBasicEntities(
+    normalized
+      .replace(/^#{1,6}\s*/gm, "")
+      .replace(/\*\*/g, "")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/`/g, "")
+      .replace(/^\s*[-*]\s+/gm, "• ")
+      .replace(/^\s*\d+\.\s+/gm, "")
+      .trim(),
+  );
 }
 
 function cleanSourceText(text?: string) {
@@ -59,173 +101,68 @@ function getSourceHost(url: string) {
   }
 }
 
-function renderInlineMarkdown(text: string, keyPrefix: string) {
-  const parts: ReactNode[] = [];
-  const regex = /(\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null = null;
+function sanitizeAssistantHtml(html: string) {
+  let safe = html
+    .replace(/```html/gi, "")
+    .replace(/```/g, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(
+      /<\/?(html|body|head|meta|iframe|object|embed|form|input|button|textarea|svg|math)[^>]*>/gi,
+      "",
+    )
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\sstyle=("[^"]*"|'[^']*')/gi, "")
+    .trim();
 
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`${keyPrefix}-text-${lastIndex}`}>
-          {text.slice(lastIndex, match.index)}
-        </span>,
-      );
-    }
+  safe = safe.replace(/<a\b([^>]*)>/gi, (_match, attrs: string) => {
+    const hrefMatch = attrs.match(/\shref=("([^"]+)"|'([^']+)')/i);
+    const href = hrefMatch ? (hrefMatch[2] ?? hrefMatch[3] ?? "") : "";
+    const safeHref = /^https?:\/\//i.test(href) ? href : "";
 
-    if (match[2]) {
-      parts.push(
-        <strong
-          key={`${keyPrefix}-strong-${match.index}`}
-          className="font-semibold text-slate-950"
-        >
-          {match[2]}
-        </strong>,
-      );
-    } else if (match[3]) {
-      parts.push(
-        <em
-          key={`${keyPrefix}-em-${match.index}`}
-          className="italic text-slate-800"
-        >
-          {match[3]}
-        </em>,
-      );
-    }
+    return safeHref
+      ? `<a href="${safeHref}" target="_blank" rel="noreferrer noopener">`
+      : "<a>";
+  });
 
-    lastIndex = regex.lastIndex;
+  safe = safe.replace(
+    /<(?!\/?(section|div|p|ul|ol|li|strong|em|a|br|h3|h4)\b)[^>]+>/gi,
+    "",
+  );
+
+  if (!isHtmlContent(safe)) {
+    return `<section><p>${escapeHtml(decodeBasicEntities(safe))}</p></section>`;
   }
 
-  if (lastIndex < text.length) {
-    parts.push(
-      <span key={`${keyPrefix}-tail-${lastIndex}`}>
-        {text.slice(lastIndex)}
-      </span>,
-    );
-  }
-
-  return parts;
+  return safe;
 }
 
-function RichTextMessage({ text }: { text: string }) {
-  const normalized = text.replace(/\r\n/g, "\n").trim();
-  const lines = normalized ? normalized.split("\n") : [];
-  const blocks: ReactNode[] = [];
-  let index = 0;
-  let blockIndex = 0;
+function AssistantHtmlMessage({ html }: { html: string }) {
+  const safeHtml = sanitizeAssistantHtml(html);
 
-  while (index < lines.length) {
-    const line = lines[index].trim();
+  return (
+    <div
+      className="space-y-4 text-slate-800 [&_section]:rounded-[1.35rem] [&_section]:border [&_section]:border-amber-100/80 [&_section]:bg-white/80 [&_section]:px-4 [&_section]:py-3.5 [&_section]:shadow-[0_10px_30px_rgba(120,53,15,0.06)] [&_section+section]:mt-3.5 [&_h3]:mb-2 [&_h3]:text-[11px] [&_h3]:font-semibold [&_h3]:uppercase [&_h3]:tracking-[0.24em] [&_h3]:text-amber-700 [&_h4]:mb-2 [&_h4]:text-sm [&_h4]:font-semibold [&_h4]:text-slate-900 [&_p]:text-sm [&_p]:leading-7 [&_p]:text-slate-700 md:[&_p]:text-[15px] [&_ul]:space-y-2.5 [&_ul]:pl-5 [&_ul]:text-sm [&_ul]:leading-7 [&_ul]:text-slate-700 [&_ul]:marker:text-amber-700 [&_ol]:space-y-2.5 [&_ol]:pl-5 [&_ol]:text-sm [&_ol]:leading-7 [&_ol]:text-slate-700 [&_ol]:marker:font-semibold [&_ol]:marker:text-amber-700 [&_strong]:font-semibold [&_strong]:text-slate-950 [&_em]:italic [&_a]:font-medium [&_a]:text-amber-800 [&_a]:underline-offset-4 hover:[&_a]:underline"
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
+    />
+  );
+}
 
-    if (!line) {
-      index += 1;
-      continue;
-    }
+function PlainAssistantMessage({ text }: { text: string }) {
+  return (
+    <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700 md:text-[15px]">
+      {stripFormattedContentForTyping(text)}
+    </p>
+  );
+}
 
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
-    const isSoftHeading =
-      !headingMatch &&
-      line.length <= 48 &&
-      index + 1 < lines.length &&
-      !lines[index + 1].trim() &&
-      !/[.!?]$/.test(line);
-
-    if (headingMatch || isSoftHeading) {
-      const level = headingMatch ? headingMatch[1].length : 2;
-      const headingText = headingMatch ? headingMatch[2] : line;
-      const className =
-        level === 1
-          ? "text-xl font-semibold tracking-tight text-slate-950 md:text-2xl"
-          : level === 2
-            ? "text-lg font-semibold tracking-tight text-slate-950 md:text-xl"
-            : "text-base font-semibold tracking-tight text-slate-900";
-
-      blocks.push(
-        <h3 key={`heading-${blockIndex}`} className={className}>
-          {headingText}
-        </h3>,
-      );
-      blockIndex += 1;
-      index += 1;
-      continue;
-    }
-
-    if (/^[-*]\s+/.test(line)) {
-      const items: string[] = [];
-
-      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
-        items.push(lines[index].trim().replace(/^[-*]\s+/, ""));
-        index += 1;
-      }
-
-      blocks.push(
-        <ul
-          key={`ul-${blockIndex}`}
-          className="space-y-2.5 pl-5 text-sm leading-7 text-slate-800 marker:text-amber-700"
-        >
-          {items.map((item, itemIndex) => (
-            <li key={`ul-${blockIndex}-${itemIndex}`}>
-              {renderInlineMarkdown(item, `ul-${blockIndex}-${itemIndex}`)}
-            </li>
-          ))}
-        </ul>,
-      );
-      blockIndex += 1;
-      continue;
-    }
-
-    if (/^\d+\.\s+/.test(line)) {
-      const items: string[] = [];
-
-      while (index < lines.length && /^\d+\.\s+/.test(lines[index].trim())) {
-        items.push(lines[index].trim().replace(/^\d+\.\s+/, ""));
-        index += 1;
-      }
-
-      blocks.push(
-        <ol
-          key={`ol-${blockIndex}`}
-          className="space-y-2.5 pl-5 text-sm leading-7 text-slate-800 marker:font-semibold marker:text-amber-700"
-        >
-          {items.map((item, itemIndex) => (
-            <li key={`ol-${blockIndex}-${itemIndex}`}>
-              {renderInlineMarkdown(item, `ol-${blockIndex}-${itemIndex}`)}
-            </li>
-          ))}
-        </ol>,
-      );
-      blockIndex += 1;
-      continue;
-    }
-
-    const paragraphLines = [line];
-    index += 1;
-
-    while (
-      index < lines.length &&
-      lines[index].trim() &&
-      !/^[-*]\s+/.test(lines[index].trim()) &&
-      !/^\d+\.\s+/.test(lines[index].trim()) &&
-      !/^(#{1,3})\s+(.+)$/.test(lines[index].trim())
-    ) {
-      paragraphLines.push(lines[index].trim());
-      index += 1;
-    }
-
-    blocks.push(
-      <p key={`p-${blockIndex}`} className="text-sm leading-7 text-slate-700 md:text-[15px]">
-        {renderInlineMarkdown(paragraphLines.join(" "), `p-${blockIndex}`)}
-      </p>,
-    );
-    blockIndex += 1;
+function FinalAssistantMessage({ text }: { text: string }) {
+  if (isHtmlContent(text)) {
+    return <AssistantHtmlMessage html={text} />;
   }
 
-  if (!blocks.length) {
-    return <p className="text-sm leading-7 text-slate-800">{text}</p>;
-  }
-
-  return <div className="space-y-4">{blocks}</div>;
+  return <PlainAssistantMessage text={text} />;
 }
 
 function AnimatedMessage({
@@ -235,8 +172,10 @@ function AnimatedMessage({
   text: string;
   animate?: boolean;
 }) {
-  const plainText = stripMarkdownForTyping(text);
-  const [visibleLength, setVisibleLength] = useState(animate ? 0 : plainText.length);
+  const plainText = stripFormattedContentForTyping(text);
+  const [visibleLength, setVisibleLength] = useState(
+    animate ? 0 : plainText.length,
+  );
   const [isComplete, setIsComplete] = useState(!animate);
 
   useEffect(() => {
@@ -273,13 +212,16 @@ function AnimatedMessage({
   }, [animate, plainText]);
 
   if (!animate || isComplete) {
-    return <RichTextMessage text={text} />;
+    return <FinalAssistantMessage text={text} />;
   }
 
   return (
-    <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800 md:text-[15px]" aria-live="polite">
+    <p
+      className="whitespace-pre-wrap text-sm leading-7 text-slate-800 md:text-[15px]"
+      aria-live="polite"
+    >
       {plainText.slice(0, visibleLength)}
-      <span className="ml-0.5 inline-block h-5 w-0.5 animate-pulse rounded-full bg-amber-700 align-[-2px]" />
+      <span className="ml-0.5 inline-block h-5 w-[2px] animate-pulse rounded-full bg-amber-700 align-[-2px]" />
     </p>
   );
 }
@@ -361,6 +303,24 @@ export function AIChatConversation({
         <div className="mx-auto flex h-full w-full max-w-6xl min-h-0 flex-1 flex-col">
           <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto pr-0 md:pr-1">
             <div className="space-y-4 pb-4">
+              {!messages.length ? (
+                <div className="flex min-h-full items-center justify-center py-10 md:py-14">
+                  <div className="flex flex-col w-full max-w-xl items-center gap-4 px-5 py-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 p-2">
+                      <Search className="h-12 w-12" />
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <p className="text-xl font-medium text-slate-900 md:text-[15px]">
+                        Need any suggestions?
+                      </p>
+                      <p className="mt-1 text-md leading-6 text-slate-600">
+                        Ask for a ring idea, a jewelry image, gold market insight, or design inspiration.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {messages.map((message) => {
                 const isAssistant = message.role === "assistant";
                 const hasContent = Boolean(message.content?.trim());
@@ -374,7 +334,7 @@ export function AIChatConversation({
                       className={`rounded-[1.7rem] border p-4 shadow-sm md:p-5 ${
                         isAssistant
                           ? "w-full max-w-4xl border-amber-100 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(255,249,235,0.72)_100%)]"
-                          : "w-fit max-w-[85%] border-amber-200 bg-amber-50/90 md:max-w-152"
+                          : "w-fit max-w-[85%] border-amber-200 bg-amber-50/90 md:max-w-[38rem]"
                       }`}
                     >
                       {isAssistant && hasContent ? (
@@ -430,7 +390,13 @@ export function AIChatConversation({
                       ) : null}
 
                       {message.sources.length && !message.images.length ? (
-                        <div className={hasContent || message.images.length ? "mt-5 rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5" : "rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5"}>
+                        <div
+                          className={
+                            hasContent || message.images.length
+                              ? "mt-5 rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5"
+                              : "rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5"
+                          }
+                        >
                           <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
                             <Search className="h-3.5 w-3.5" />
                             Curated References
