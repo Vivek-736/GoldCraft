@@ -1,6 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
-import { DashboardShell } from "@/components/dashboard-shell";
-import { Card, CardContent } from "@/components/ui/card";
+import { desc, eq } from "drizzle-orm";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { nanoid } from "nanoid";
+import { db } from "@/config/db";
+import { chatsTable } from "@/config/schema";
 
 export default async function AIChatPage() {
   const { userId, redirectToSignIn } = await auth();
@@ -9,19 +12,31 @@ export default async function AIChatPage() {
     return redirectToSignIn();
   }
 
-  return (
-    <DashboardShell
-      eyebrow="AI Chat"
-      title="A gold-only conversation space."
-      description="This page is reserved for tightly scoped chat about gold, jewellery craftsmanship, style decisions, care, and collection guidance."
-    >
-      <Card className="border-amber-200 bg-white/95 shadow-[0_18px_55px_rgba(217,119,6,0.07)]">
-        <CardContent className="p-6 md:p-8">
-          <p className="max-w-2xl text-slate-600 leading-7">
-            The assistant here should stay disciplined, elegant, and on-topic. If the conversation leaves the world of gold, it should gently refuse and return the user to relevant help.
-          </p>
-        </CardContent>
-      </Card>
-    </DashboardShell>
-  );
+  const user = await currentUser();
+  const email = user?.primaryEmailAddress?.emailAddress;
+
+  if (!email) {
+    return redirectToSignIn();
+  }
+
+  const existingChat = await db
+    .select()
+    .from(chatsTable)
+    .where(eq(chatsTable.userEmail, email))
+    .orderBy(desc(chatsTable.updatedAt));
+
+  if (existingChat.length) {
+    redirect(`/dashboard/ai-chat/${existingChat[0].chatId}`);
+  }
+
+  const chatId = nanoid(12);
+  
+  await db.insert(chatsTable).values({
+    chatId,
+    userEmail: email,
+    title: "New chat",
+    updatedAt: new Date(),
+  });
+
+  redirect(`/dashboard/ai-chat/${chatId}`);
 }
