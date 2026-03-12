@@ -3,6 +3,7 @@
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp,
   ExternalLink,
@@ -11,6 +12,7 @@ import {
   Sparkles,
   ZoomIn,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export type ChatMessageView = {
   id: number;
@@ -29,6 +32,21 @@ export type ChatMessageView = {
   sources: Array<{ title: string; url: string; content?: string }>;
   createdAt?: string;
   animate?: boolean;
+};
+
+type ChatInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  isSending: boolean;
+  hasStartedChat: boolean;
+};
+
+type ChatMessagesProps = {
+  messages: ChatMessageView[];
+  isSending: boolean;
+  onSelectImage: (image: string) => void;
+  endRef: React.RefObject<HTMLDivElement | null>;
 };
 
 function isHtmlContent(text: string) {
@@ -64,7 +82,7 @@ function stripFormattedContentForTyping(text: string) {
   if (isHtmlContent(normalized)) {
     return decodeBasicEntities(
       normalized
-        .replace(/<li\b[^>]*>/gi, "• ")
+        .replace(/<li\b[^>]*>/gi, "- ")
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/(p|div|section|li|h3|h4|ul|ol)>/gi, "\n")
         .replace(/<[^>]+>/g, "")
@@ -79,7 +97,7 @@ function stripFormattedContentForTyping(text: string) {
       .replace(/\*\*/g, "")
       .replace(/__(.*?)__/g, "$1")
       .replace(/`/g, "")
-      .replace(/^\s*[-*]\s+/gm, "• ")
+      .replace(/^\s*[-*]\s+/gm, "- ")
       .replace(/^\s*\d+\.\s+/gm, "")
       .trim(),
   );
@@ -226,7 +244,193 @@ function AnimatedMessage({
   );
 }
 
-export function AIChatConversation({
+function ChatInput({
+  value,
+  onChange,
+  onSubmit,
+  isSending,
+  hasStartedChat,
+}: ChatInputProps) {
+  return (
+    <motion.div
+      layout
+      transition={{ type: "spring", stiffness: 240, damping: 28 }}
+      className={cn(
+        "w-full rounded-[1.9rem] border border-amber-100 bg-white/96 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur md:px-5 md:py-3.5",
+        hasStartedChat ? "max-w-5xl" : "max-w-3xl",
+      )}
+    >
+      <div className="flex items-end gap-3">
+        <Textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Ask GoldCraft AI about gold, markets, design inspiration, news, startups, images, or developer trends..."
+          className="min-h-[56px] max-h-32 flex-1 resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus-visible:ring-0"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              onSubmit();
+            }
+          }}
+        />
+        <Button
+          onClick={onSubmit}
+          disabled={isSending || !value.trim()}
+          className="h-11 shrink-0 rounded-full bg-amber-800 px-4 text-white hover:bg-amber-900"
+        >
+          <ArrowUp className="h-4 w-4" />
+          <span className="sr-only">Send</span>
+        </Button>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="text-[11px] leading-5 text-slate-500">
+          Enter sends. Shift + Enter creates a new line.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+function ChatMessages({
+  messages,
+  isSending,
+  onSelectImage,
+  endRef,
+}: ChatMessagesProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+      className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto pr-0 md:pr-1"
+    >
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 pb-4 pt-2">
+        {messages.map((message) => {
+          const isAssistant = message.role === "assistant";
+          const hasContent = Boolean(message.content?.trim());
+
+          return (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className={cn("flex", isAssistant ? "justify-start" : "justify-end")}
+            >
+              <div
+                className={cn(
+                  "rounded-[1.7rem] border p-4 shadow-sm md:p-5",
+                  isAssistant
+                    ? "w-full max-w-4xl border-amber-100 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(255,249,235,0.72)_100%)]"
+                    : "w-fit max-w-[85%] border-amber-200 bg-amber-50/90 md:max-w-[38rem]",
+                )}
+              >
+                {isAssistant && hasContent ? (
+                  <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    GoldCraft Curated
+                  </div>
+                ) : null}
+
+                {isAssistant && hasContent ? (
+                  <AnimatedMessage
+                    text={message.content}
+                    animate={message.animate && !message.images.length}
+                  />
+                ) : null}
+
+                {!isAssistant ? (
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-slate-900 md:text-[15px]">
+                    {message.content}
+                  </p>
+                ) : null}
+
+                {message.images.length ? (
+                  <div className={hasContent ? "mt-5" : "mt-0"}>
+                    <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                      <Search className="h-3.5 w-3.5" />
+                      Visual References
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {message.images.map((image) => (
+                        <button
+                          key={image}
+                          type="button"
+                          onClick={() => onSelectImage(image)}
+                          className="group relative overflow-hidden rounded-[1.5rem] border border-amber-100 bg-amber-50/40 text-left shadow-sm transition-colors hover:border-amber-300"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image}
+                            alt="Chat response visual"
+                            className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                          />
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t from-black/60 via-black/10 to-transparent px-4 py-3 text-white">
+                            <span className="text-sm font-medium">Open preview</span>
+                            <ZoomIn className="h-4 w-4" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {message.sources.length && !message.images.length ? (
+                  <div className="mt-5 rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5">
+                    <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                      <Search className="h-3.5 w-3.5" />
+                      Curated References
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {message.sources.map((source, index) => (
+                        <Link
+                          key={`${source.url}-${index}`}
+                          href={source.url}
+                          target="_blank"
+                          className="group rounded-[1.5rem] border border-white/80 bg-white/90 p-4 shadow-sm transition-colors hover:border-amber-200 hover:bg-white"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {source.title || source.url}
+                              </p>
+                              <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-amber-700">
+                                {getSourceHost(source.url)}
+                              </p>
+                            </div>
+                            <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          </div>
+                          {cleanSourceText(source.content) ? (
+                            <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">
+                              {cleanSourceText(source.content)}
+                            </p>
+                          ) : null}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {isSending ? (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-3 rounded-[1.6rem] border border-amber-100 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+              <LoaderCircle className="h-4 w-4 animate-spin text-amber-700" />
+              GoldCraft AI is thinking...
+            </div>
+          </div>
+        ) : null}
+
+        <div ref={endRef} />
+      </div>
+    </motion.div>
+  );
+}
+
+function ChatPage({
   chatId,
   initialMessages,
 }: {
@@ -234,20 +438,27 @@ export function AIChatConversation({
   initialMessages: ChatMessageView[];
 }) {
   const [messages, setMessages] = useState<ChatMessageView[]>(initialMessages);
+  const [hasStartedChat, setHasStartedChat] = useState(initialMessages.length > 0);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isSending]);
+    if (hasStartedChat) {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages, isSending, hasStartedChat]);
 
   const handleSubmit = async () => {
     const value = input.trim();
 
     if (!value || isSending) {
       return;
+    }
+
+    if (!hasStartedChat) {
+      setHasStartedChat(true);
     }
 
     const optimisticUserMessage: ChatMessageView = {
@@ -300,184 +511,60 @@ export function AIChatConversation({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-4">
-        <div className="mx-auto flex h-full w-full max-w-6xl min-h-0 flex-1 flex-col">
-          <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto pr-0 md:pr-1">
-            <div className="space-y-4 pb-4">
-              {!messages.length ? (
-                <div className="flex min-h-full items-center justify-center py-10 md:py-14">
-                  <div className="flex flex-col w-full max-w-xl items-center gap-4 px-5 py-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 p-2">
-                      <Search className="h-12 w-12" />
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <p className="text-xl font-medium text-slate-900 md:text-[15px]">
-                        Need any suggestions?
-                      </p>
-                      <p className="mt-1 text-md leading-6 text-slate-600">
-                        Ask for a ring idea, a jewelry image, gold market insight, or design inspiration.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {messages.map((message) => {
-                const isAssistant = message.role === "assistant";
-                const hasContent = Boolean(message.content?.trim());
-
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
-                  >
-                    <div
-                      className={`rounded-[1.7rem] border p-4 shadow-sm md:p-5 ${
-                        isAssistant
-                          ? "w-full max-w-4xl border-amber-100 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(255,249,235,0.72)_100%)]"
-                          : "w-fit max-w-[85%] border-amber-200 bg-amber-50/90 md:max-w-[38rem]"
-                      }`}
-                    >
-                      {isAssistant && hasContent ? (
-                        <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                          <Sparkles className="h-3.5 w-3.5" />
-                          GoldCraft Curated
-                        </div>
-                      ) : null}
-
-                      {isAssistant && hasContent ? (
-                        <AnimatedMessage
-                          text={message.content}
-                          animate={message.animate && !message.images.length}
-                        />
-                      ) : null}
-
-                      {!isAssistant ? (
-                        <p className="whitespace-pre-wrap text-sm leading-7 text-slate-900 md:text-[15px]">
-                          {message.content}
-                        </p>
-                      ) : null}
-
-                      {message.images.length ? (
-                        <div className={hasContent ? "mt-5" : "mt-0"}>
-                          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                            <Search className="h-3.5 w-3.5" />
-                            Visual References
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {message.images.map((image) => (
-                              <button
-                                key={image}
-                                type="button"
-                                onClick={() => setSelectedImage(image)}
-                                className="group relative overflow-hidden rounded-[1.5rem] border border-amber-100 bg-amber-50/40 text-left shadow-sm transition-colors hover:border-amber-300"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={image}
-                                  alt="Chat response visual"
-                                  className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                />
-                                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t from-black/60 via-black/10 to-transparent px-4 py-3 text-white">
-                                  <span className="text-sm font-medium">
-                                    Open preview
-                                  </span>
-                                  <ZoomIn className="h-4 w-4" />
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {message.sources.length && !message.images.length ? (
-                        <div
-                          className={
-                            hasContent || message.images.length
-                              ? "mt-5 rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5"
-                              : "rounded-[1.5rem] border border-amber-100 bg-amber-50/45 p-3.5"
-                          }
-                        >
-                          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                            <Search className="h-3.5 w-3.5" />
-                            Curated References
-                          </div>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            {message.sources.map((source, index) => (
-                              <Link
-                                key={`${source.url}-${index}`}
-                                href={source.url}
-                                target="_blank"
-                                className="group rounded-4xl border border-white/80 bg-white/90 p-4 shadow-sm transition-colors hover:border-amber-200 hover:bg-white"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-slate-900">
-                                      {source.title || source.url}
-                                    </p>
-                                    <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-amber-700">
-                                      {getSourceHost(source.url)}
-                                    </p>
-                                  </div>
-                                  <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                </div>
-                                {cleanSourceText(source.content) ? (
-                                  <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">
-                                    {cleanSourceText(source.content)}
-                                  </p>
-                                ) : null}
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {isSending ? (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-3 rounded-[1.6rem] border border-amber-100 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-                    <LoaderCircle className="h-4 w-4 animate-spin text-amber-700" />
-                    GoldCraft AI is thinking...
-                  </div>
-                </div>
-              ) : null}
-
-              <div ref={endRef} />
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-[1.9rem] border border-amber-100 bg-white/96 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur md:px-5 md:py-3.5">
-            <div className="flex items-end gap-3">
-              <Textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask GoldCraft AI about gold, markets, design inspiration, news, startups, images, or developer trends..."
-                className="min-h-13.5 max-h-32 flex-1 resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus-visible:ring-0"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void handleSubmit();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleSubmit}
-                disabled={isSending || !input.trim()}
-                className="h-11 shrink-0 rounded-full bg-amber-800 px-4 text-white hover:bg-amber-900"
-              >
-                <ArrowUp className="h-4 w-4" />
-                <span className="sr-only">Send</span>
-              </Button>
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-[11px] leading-5 text-slate-500">
-                Enter sends. Shift + Enter creates a new line.
+        <motion.div
+          layout
+          transition={{ type: "spring", stiffness: 220, damping: 30 }}
+          className={cn(
+            "mx-auto flex h-full w-full max-w-5xl flex-col",
+            hasStartedChat ? "min-h-0 justify-end" : "justify-center",
+          )}
+        >
+          {!hasStartedChat ? (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -18 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="mx-auto -mt-32 mb-4 w-full max-w-3xl text-center"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
+                GoldCraft AI
               </p>
-            </div>
-          </div>
-        </div>
+              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+                Need any suggestions?
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-[15px] leading-7 text-slate-600 md:text-base">
+                Ask for a ring idea, a jewelry image, gold market insight, or design inspiration.
+              </p>
+            </motion.div>
+          ) : null}
+
+          <AnimatePresence initial={false}>
+            {hasStartedChat ? (
+              <ChatMessages
+                messages={messages}
+                isSending={isSending}
+                onSelectImage={setSelectedImage}
+                endRef={endRef}
+              />
+            ) : null}
+          </AnimatePresence>
+
+          <motion.div
+            layout
+            transition={{ type: "spring", stiffness: 220, damping: 30 }}
+            className={cn("mx-auto flex w-full justify-center", hasStartedChat ? "mt-4" : "mt-1")}
+          >
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              isSending={isSending}
+              hasStartedChat={hasStartedChat}
+            />
+          </motion.div>
+        </motion.div>
       </div>
 
       <Dialog
@@ -511,4 +598,11 @@ export function AIChatConversation({
       </Dialog>
     </>
   );
+}
+
+export function AIChatConversation(props: {
+  chatId: string;
+  initialMessages: ChatMessageView[];
+}) {
+  return <ChatPage {...props} />;
 }
