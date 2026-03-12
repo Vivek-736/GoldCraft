@@ -49,10 +49,10 @@ export function DashboardShell({
   const topSpacing = showNav ? "pt-32 md:pt-36" : "pt-10 md:pt-12";
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#fcfcfc] text-slate-900">
+    <main className="min-h-screen overflow-x-hidden bg-white text-slate-900">
       {showNav ? (
         <div className="fixed inset-x-0 top-0 z-50 border-b border-white/30">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
+          <div className="mx-auto flex max-w-7xl bg-white border-b-2 border-slate-300 z-100 items-center justify-between px-4 py-4 md:px-6">
             <Link href="/" className="flex items-center gap-3">
               <div className="overflow-hidden rounded-full border border-white/50 bg-white/60 p-1.5 shadow-sm">
                 <Image
