@@ -66,13 +66,13 @@ export function AboutSection() {
 
             <div className="grid grid-cols-2 gap-8 text-center md:text-left pt-4">
               <div className="space-y-2">
-                <h3 className="text-4xl font-serif text-amber-600">30+</h3>
+                <h3 className="text-4xl font-serif text-amber-600">Inherited</h3>
                 <p className="text-slate-500 text-xs uppercase tracking-widest">
                   Years of Artistry
                 </p>
               </div>
               <div className="space-y-2">
-                <h3 className="text-4xl font-serif text-amber-600">15k+</h3>
+                <h3 className="text-4xl font-serif text-amber-600">Prospective</h3>
                 <p className="text-slate-500 text-xs uppercase tracking-widest">
                   Stories Created
                 </p>

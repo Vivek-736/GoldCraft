@@ -1,42 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Facebook,
-  Instagram,
-  Twitter
-} from "lucide-react";
+import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export function SiteFooter() {
   return (
-    <footer className="bg-black text-white py-12 border-t border-stone-900 relative overflow-hidden">
-      <div className="container mx-auto px-4 md:px-6 relative z-10 flex flex-col items-center justify-center text-center">
-
-        <Link href="/" className="text-3xl font-serif tracking-widest uppercase text-white whitespace-nowrap inline-block mb-6">
-          GOLD<span className="text-amber-500 font-light">CRAFT</span>
+    <footer className="relative overflow-hidden border-t border-stone-900 bg-black py-12 text-white">
+      <div className="container relative z-10 mx-auto flex flex-col items-center justify-center px-4 text-center md:px-6">
+        <Link
+          href="/"
+          className="mb-6 inline-block whitespace-nowrap text-3xl font-serif uppercase tracking-widest text-white"
+        >
+          GOLD<span className="font-light text-amber-500">CRAFT</span>
         </Link>
 
-        <p className="text-stone-100 font-light text-sm max-w-sm mb-8 leading-relaxed">
+        <p className="mb-8 max-w-sm text-sm font-light leading-relaxed text-stone-100">
           The intersection of luxury artistry and intelligent craftsmanship.
         </p>
 
-        <div className="flex gap-4 mb-10">
-          <a href="#" className="w-10 h-10 rounded-full border border-stone-800 bg-stone-950 flex items-center justify-center text-stone-400 hover:bg-amber-500 hover:text-black hover:border-amber-500 transition-all duration-300">
-            <Facebook className="w-4 h-4" />
+        <div className="mb-10 flex gap-4">
+          <a
+            href="#"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-800 bg-stone-950 text-stone-400 transition-all duration-300 hover:border-amber-500 hover:bg-amber-500 hover:text-black"
+          >
+            <Facebook className="h-4 w-4" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full border border-stone-800 bg-stone-950 flex items-center justify-center text-stone-400 hover:bg-amber-500 hover:text-black hover:border-amber-500 transition-all duration-300">
-            <Twitter className="w-4 h-4" />
+          <a
+            href="#"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-800 bg-stone-950 text-stone-400 transition-all duration-300 hover:border-amber-500 hover:bg-amber-500 hover:text-black"
+          >
+            <Twitter className="h-4 w-4" />
           </a>
-          <a href="#" className="w-10 h-10 rounded-full border border-stone-800 bg-stone-950 flex items-center justify-center text-stone-400 hover:bg-amber-500 hover:text-black hover:border-amber-500 transition-all duration-300">
-            <Instagram className="w-4 h-4" />
+          <a
+            href="#"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-800 bg-stone-950 text-stone-400 transition-all duration-300 hover:border-amber-500 hover:bg-amber-500 hover:text-black"
+          >
+            <Instagram className="h-4 w-4" />
           </a>
         </div>
 
-        <div className="pt-8 border-t border-stone-900 w-full max-w-2xl flex flex-col items-center gap-4 text-xs font-light text-stone-200">
-          <p className="tracking-wide text-stone-200">
-            Crafted with <span className="text-amber-500">💖</span> and <span className="text-amber-500">☕</span> by <span className="font-medium text-white">Vivek</span>
+        <div className="w-full max-w-3xl border-t border-stone-900 pt-8">
+          <div className="grid gap-3 text-xs font-light text-stone-300 md:grid-cols-2 md:text-left">
+            <p>&copy; {new Date().getFullYear()} Gold Craft.</p>
+            <p className="md:text-right">All rights reserved.</p>
+          </div>
+
+          <p className="mt-6 text-sm font-light tracking-wide text-stone-100 md:text-base">
+            Crafted with <span className="text-amber-500">care</span> by{" "}
+            <span className="font-medium text-white">Vivek</span>
           </p>
-          <p>&copy; {new Date().getFullYear()} Gold Craft. All rights reserved.</p>
         </div>
       </div>
     </footer>

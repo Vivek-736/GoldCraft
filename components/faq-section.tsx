@@ -13,33 +13,33 @@ interface FaqItem {
 const faqs: FaqItem[] = [
     {
         id: "01",
-        question: "How does the AI customization process work?",
+        question: "How does the customization process work?",
         answer:
-            "Our cutting-edge AI assistant guides you through the design process. You describe your vision, select preferences, and the AI generates stunning 3D models in real-time. You can tweak every detail—from the metal type to gem placement—until it's absolutely perfect.",
+            "Our process is focused on manually customizing the color and visual finish of existing CAD models. You choose the direction you want, and we refine the presentation around prepared model options rather than generating brand-new CAD files with AI.",
     },
     {
         id: "02",
         question: "Can I bring my own design or sketch?",
         answer:
-            "Absolutely. You can upload any sketch or reference image to our platform. Our AI interprets your design and creates a high-fidelity 3D rendering that our master craftsmen will use as a blueprint to forge your piece.",
+            "Absolutely. You can share a sketch or reference image to communicate the style you want. We use that input to guide the customization of suitable existing CAD options and their visual treatment, especially color direction and presentation.",
     },
     {
         id: "03",
-        question: "What materials do you use for custom pieces?",
+        question: "Do designed jewelry pieces come with a warranty?",
         answer:
-            "We source only the highest quality, conflict-free materials. Choose from 18k Yellow, White, or Rose Gold, Platinum, and a curated selection of ethically sourced diamonds and precious gemstones.",
+            "No, we do not offer a warranty at this time. If you have questions before placing an order, we recommend confirming every customization detail with us in advance so expectations are fully clear.",
     },
     {
         id: "04",
         question: "How long does it take to craft a custom jewelry piece?",
         answer:
-            "Once your AI-generated 3D design is approved, our artisans begin the crafting process. Typically, a custom piece takes between 2 to 4 weeks to be cast, set, polished, and delivered to your doorstep in premium packaging.",
+            "Once your selected customization is finalized, our team moves forward with the production workflow. Timelines can vary based on the piece and finishing requirements, but we keep the process clear and coordinated from approval through delivery.",
     },
     {
         id: "05",
-        question: "Is there a warranty on custom-designed jewelry?",
+        question: "What materials do you use for custom pieces?",
         answer:
-            "Yes. Every GoldCraft piece comes with a lifetime authenticity guarantee and a dedicated 2-year warranty covering any manufacturing defects. We stand behind the enduring quality of our craftsmanship.",
+            "We source only the highest quality, conflict-free materials. Choose from 18k Yellow, White, or Rose Gold, Platinum, and a curated selection of ethically sourced diamonds and precious gemstones.",
     },
     {
         id: "06",
@@ -62,10 +62,10 @@ export function FaqSection() {
             <div className="container mx-auto px-4 md:px-6 relative z-10 max-w-7xl">
                 <div className="max-w-2xl text-center mx-auto mb-12 md:mb-16">
                     <h2 className="text-4xl md:text-5xl lg:text-7xl font-serif text-black mb-6 tracking-tight">
-                        FAQ's
+                        FAQ&apos;s
                     </h2>
                     <p className="text-stone-600 text-lg md:text-xl font-light leading-relaxed">
-                        We're here to help you and solve doubts. Find answers to the most common questions below.
+                        We&apos;re here to help you and solve doubts. Find answers to the most common questions below.
                     </p>
                 </div>
 
