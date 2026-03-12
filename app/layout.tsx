@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { EB_Garamond } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Provider from "./Provider";
+import { shadcn } from "@clerk/themes";
 
 const ebGaramond = EB_Garamond({
   subsets: ["latin"],
@@ -33,36 +34,17 @@ export default function RootLayout({
         layout: {
           unsafe_disableDevelopmentModeWarnings: true,
         },
-        variables: {
-          colorPrimary: "#d97706",
-          colorText: "#78350f",
-          colorInputBackground: "#ffffff",
-          colorBackground: "#fffbeb",
-          colorInputText: "#78350f",
-        },
-        elements: {
-          card: "border-2 border-amber-500",
-          headerTitle: "text-2xl font-semibold text-amber-700",
-          headerSubtitle: "text-amber-600",
-          socialButtonsBlockButton:
-            "bg-amber-600 hover:bg-amber-700 text-white",
-          formButtonPrimary: "bg-amber-600 hover:bg-amber-700 text-white",
-          formFieldLabel: "text-amber-800",
-          footer: "text-amber-600",
-          footerActionLink: "text-amber-700 hover:text-amber-800",
-          profileSectionTitle: "text-amber-700",
-          formFieldInput:
-            "border-amber-300 focus:border-amber-500 focus:ring-amber-500",
-          badge: "bg-amber-100 text-amber-800",
-          alert: "bg-amber-50 border-amber-200 text-amber-800",
-          button: "mr-2",
-          avatar: "border-2 border-amber-400",
-        },
+        theme: shadcn
       }}
     >
-      <html lang="en" suppressHydrationWarning>
+      <html 
+        lang="en" 
+        suppressHydrationWarning
+      >
         <body className={`${ebGaramond.className} antialiased`}>
-          <Provider>{children}</Provider>
+          <Provider>
+            {children}
+          </Provider>
         </body>
       </html>
     </ClerkProvider>
