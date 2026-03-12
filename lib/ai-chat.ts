@@ -997,7 +997,7 @@ async function geminiTextRequest({
   maxOutputTokens?: number;
   temperature?: number;
 }) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY_TWO;
 
   if (!apiKey) {
     throw new Error("Missing GEMINI_API_KEY.");
