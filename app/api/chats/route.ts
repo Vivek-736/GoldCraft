@@ -4,6 +4,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { nanoid } from "nanoid";
 import { db } from "@/config/db";
 import { chatsTable, usersTable } from "@/config/schema";
+import { ensureUsersTableSchema } from "@/lib/user-profile";
 
 async function getSignedInContext() {
   const { userId, redirectToSignIn } = await auth();
@@ -47,6 +48,8 @@ export async function GET() {
 
 export async function POST() {
   try {
+    await ensureUsersTableSchema();
+
     const { email, redirectToSignIn, user } = await getSignedInContext();
 
     if (!email) {
@@ -64,6 +67,7 @@ export async function POST() {
         email,
         imageUrl: user.imageUrl,
         phoneNumber: user.primaryPhoneNumber?.phoneNumber ?? null,
+        address: null,
       });
     }
 

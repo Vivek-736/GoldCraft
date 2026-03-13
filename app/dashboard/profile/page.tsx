@@ -14,6 +14,7 @@ import { ProfilePhoneCard } from "@/components/profile-phone-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { db } from "@/config/db";
 import { usersTable } from "@/config/schema";
+import { ensureUsersTableSchema } from "@/lib/user-profile";
 
 const formatDate = (value?: number | Date | null) => {
   if (!value) {
@@ -43,12 +44,15 @@ export default async function ProfilePage() {
   const externalAccounts =
     user.externalAccounts?.map((account) => account.provider) ?? [];
 
+  await ensureUsersTableSchema();
+
   const appUser =
     primaryEmail === "Not available"
       ? []
       : await db.select().from(usersTable).where(eq(usersTable.email, primaryEmail));
 
   const savedPhoneNumber = appUser[0]?.phoneNumber ?? null;
+  const savedAddress = appUser[0]?.address ?? null;
 
   const profileFacts = [
     { label: "Full name", value: user.fullName ?? "Not available", icon: UserRound },
@@ -68,7 +72,6 @@ export default async function ProfilePage() {
           Back to dashboard
         </Link>
       </div>
-
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="grid gap-4">
           <Card className="border-amber-200">
@@ -90,7 +93,7 @@ export default async function ProfilePage() {
 
                   <div>
                     <p className="text-xs uppercase tracking-[0.28em] text-amber-700">
-                      Clerk snapshot
+                      User snapshot
                     </p>
                     <h2 className="mt-2 text-2xl font-semibold text-slate-900">
                       {user.fullName ?? "GoldCraft User"}
@@ -128,7 +131,10 @@ export default async function ProfilePage() {
               </div>
             </CardContent>
           </Card>
-          <ProfilePhoneCard initialPhoneNumber={savedPhoneNumber} />
+          <ProfilePhoneCard
+            initialPhoneNumber={savedPhoneNumber}
+            initialAddress={savedAddress}
+          />
         </div>
 
         <div className="grid gap-4">

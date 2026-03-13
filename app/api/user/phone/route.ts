@@ -3,11 +3,14 @@ import { and, eq } from "drizzle-orm";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/config/db";
 import { usersTable } from "@/config/schema";
+import { ensureUsersTableSchema } from "@/lib/user-profile";
 
 const PHONE_REGEX = /^[+]?[(]?[0-9\s-]{8,20}$/;
 
 export async function PATCH(request: Request) {
   try {
+    await ensureUsersTableSchema();
+
     const { userId, redirectToSignIn } = await auth();
 
     if (!userId) {
@@ -23,8 +26,9 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { phoneNumber } = await request.json();
+    const { phoneNumber, address } = await request.json();
     const normalizedPhone = String(phoneNumber ?? "").trim();
+    const normalizedAddress = String(address ?? "").trim();
 
     if (!normalizedPhone) {
       return NextResponse.json(
@@ -36,6 +40,13 @@ export async function PATCH(request: Request) {
     if (!PHONE_REGEX.test(normalizedPhone)) {
       return NextResponse.json(
         { error: "Enter a valid mobile number." },
+        { status: 400 },
+      );
+    }
+
+    if (normalizedAddress.length < 10) {
+      return NextResponse.json(
+        { error: "Enter a complete delivery address." },
         { status: 400 },
       );
     }
@@ -54,6 +65,7 @@ export async function PATCH(request: Request) {
           email,
           imageUrl: clerkUser.imageUrl,
           phoneNumber: normalizedPhone,
+          address: normalizedAddress,
         })
         .returning();
 
@@ -62,7 +74,7 @@ export async function PATCH(request: Request) {
 
     const updated = await db
       .update(usersTable)
-      .set({ phoneNumber: normalizedPhone })
+      .set({ phoneNumber: normalizedPhone, address: normalizedAddress })
       .where(
         and(
           eq(usersTable.id, existingUser[0].id),
