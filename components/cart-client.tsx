@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 type CartItem = {
   id: number;
@@ -401,12 +402,16 @@ export function CartClient({
         ),
       );
       setMessage(`Rough estimate saved: ${formatINR(estimatedCostInr)}.`);
+      toast.success(`Estimate saved: ${formatINR(estimatedCostInr)}.`);
     } catch (estimateError) {
-      setError(
+      const estimateErrorMessage =
         estimateError instanceof Error
           ? estimateError.message
-          : "Unable to estimate cost right now.",
+          : "Unable to estimate cost right now.";
+      setError(
+        estimateErrorMessage,
       );
+      toast.error(estimateErrorMessage);
     } finally {
       setIsEstimating(false);
     }
@@ -415,20 +420,25 @@ export function CartClient({
   const handleCheckout = async () => {
     if (!profileComplete) {
       setShowProfilePrompt(true);
+      toast.info("Complete profile details before checkout.");
       return;
     }
 
     if (!checkoutTotalItems) {
-      setError(
+      const checkoutCountMessage =
         checkoutMode === "selected"
           ? "Select at least one cart item to checkout."
-          : "No cart items available for checkout.",
-      );
+          : "No cart items available for checkout.";
+      setError(checkoutCountMessage);
+      toast.error(checkoutCountMessage);
       return;
     }
 
     if (checkoutApproxTotal <= 0) {
-      setError("Please estimate at least one selected design before checkout.");
+      const checkoutEstimateMessage =
+        "Please estimate at least one selected design before checkout.";
+      setError(checkoutEstimateMessage);
+      toast.error(checkoutEstimateMessage);
       return;
     }
 
@@ -523,16 +533,20 @@ export function CartClient({
 
           setShowSuccessDialog(true);
           setMessage("Payment successful. Your order has been placed.");
+          toast.success("Payment done. Order placed successfully.");
         },
       });
 
       razorpay.open();
     } catch (checkoutError) {
-      setError(
+      const checkoutErrorMessage =
         checkoutError instanceof Error
           ? checkoutError.message
-          : "Unable to complete checkout.",
+          : "Unable to complete checkout.";
+      setError(
+        checkoutErrorMessage,
       );
+      toast.error(checkoutErrorMessage);
     } finally {
       setIsCheckingOut(false);
     }

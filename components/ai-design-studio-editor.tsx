@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 type AIDesignStudioEditorProps = {
   mode: "upload" | "design";
@@ -229,12 +230,16 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       setSketchUrl(uploaded.fileUrl);
       setSketchName(uploaded.fileName);
       setMessage("Sketch uploaded. You can generate the visual now.");
+      toast.success("Sketch uploaded successfully.");
     } catch (uploadError) {
-      setError(
+      const uploadMessage =
         uploadError instanceof Error
           ? uploadError.message
-          : "Failed to upload the sketch.",
+          : "Failed to upload the sketch.";
+      setError(
+        uploadMessage,
       );
+      toast.error(uploadMessage);
     } finally {
       setIsUploading(false);
     }
@@ -259,8 +264,11 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
           ? "3D visualization ready. Save it to cart if you want to keep it."
           : "Design visual ready. Save it to cart if you want to keep it.",
       );
+      toast.success("Design generated.");
     } catch (generationError) {
-      setError(readGenerationError(generationError));
+      const generationMessage = readGenerationError(generationError);
+      setError(generationMessage);
+      toast.error(generationMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -303,10 +311,14 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
       setSavedToCart(true);
       setMessage("Saved to cart.");
+      toast.success("Saved to cart.");
     } catch (saveError) {
+      const saveMessage =
+        saveError instanceof Error ? saveError.message : "Failed to save this design.";
       setError(
-        saveError instanceof Error ? saveError.message : "Failed to save this design.",
+        saveMessage,
       );
+      toast.error(saveMessage);
     } finally {
       setIsSaving(false);
     }
