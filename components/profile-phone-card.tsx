@@ -18,16 +18,20 @@ import { Label } from "@/components/ui/label";
 
 type ProfilePhoneCardProps = {
   initialPhoneNumber: string | null;
+  initialAddress: string | null;
 };
 
 export function ProfilePhoneCard({
   initialPhoneNumber,
+  initialAddress,
 }: ProfilePhoneCardProps) {
   const [open, setOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber ?? "");
+  const [address, setAddress] = useState(initialAddress ?? "");
   const [savedPhoneNumber, setSavedPhoneNumber] = useState(
     initialPhoneNumber ?? "",
   );
+  const [savedAddress, setSavedAddress] = useState(initialAddress ?? "");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -47,10 +51,13 @@ export function ProfilePhoneCard({
 
       const result = await axios.patch("/api/user/phone", {
         phoneNumber: value,
+        address,
       });
 
       setSavedPhoneNumber(result.data.phoneNumber ?? value);
       setPhoneNumber(result.data.phoneNumber ?? value);
+      setSavedAddress(result.data.address ?? address);
+      setAddress(result.data.address ?? address);
       setOpen(false);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -106,12 +113,21 @@ export function ProfilePhoneCard({
               Add it now to unlock a more personalized mobile update experience.
             </p>
           ) : null}
+
+          <div className="mt-4 border-t border-amber-100 pt-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-amber-700">
+              Saved address
+            </p>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-900 wrap-break-word">
+              {savedAddress || "Add your address now"}
+            </p>
+          </div>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="mt-5 rounded-full cursor-pointer bg-amber-800 text-white hover:bg-amber-900">
-              {hasPhoneNumber ? "Update phone number" : "Add phone number"}
+              {hasPhoneNumber ? "Update Details Further" : "Add phone number"}
             </Button>
           </DialogTrigger>
           <DialogContent className="border-amber-200 bg-[#fffdf8] sm:max-w-md">
@@ -135,6 +151,18 @@ export function ProfilePhoneCard({
                 placeholder="Enter your mobile number"
                 className="border-amber-200 bg-white text-slate-900 focus-visible:ring-amber-200"
               />
+
+              <Label htmlFor="address" className="text-amber-900">
+                Address
+              </Label>
+              <Input
+                id="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Enter your complete delivery address"
+                className="border-amber-200 bg-white text-slate-900 focus-visible:ring-amber-200"
+              />
+
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
             </div>
 
@@ -150,7 +178,7 @@ export function ProfilePhoneCard({
                     Saving
                   </>
                 ) : (
-                  "Save number"
+                  "Save Details"
                 )}
               </Button>
             </DialogFooter>

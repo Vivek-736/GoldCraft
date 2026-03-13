@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -6,6 +6,7 @@ export const usersTable = pgTable("users", {
   name: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 255 }).notNull().unique(),
   phoneNumber: varchar({ length: 30 }),
+  address: text(),
 });
 
 export const chatsTable = pgTable("chats", {
@@ -35,5 +36,13 @@ export const aiDesignCartItemsTable = pgTable("ai_design_cart_items", {
   prompt: text(),
   sketchUrl: text(),
   outputUrl: text().notNull(),
+  estimatedCostInr: integer(),
+  estimatedWeightGrams: varchar({ length: 40 }),
+  estimateMeta: text(),
+  estimatedAt: timestamp({ withTimezone: true }),
+  orderPlaced: boolean().notNull().default(false),
+  orderPlacedAt: timestamp({ withTimezone: true }),
+  razorpayOrderId: varchar({ length: 100 }),
+  razorpayPaymentId: varchar({ length: 100 }),
   createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 });
