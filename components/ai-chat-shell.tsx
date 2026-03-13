@@ -85,7 +85,6 @@ export function AIChatShell({
               <p className="text-sm font-semibold text-slate-900">AI Chat</p>
             </div>
           </Link>
-
           <Button
             onClick={createNewChat}
             disabled={isCreating}

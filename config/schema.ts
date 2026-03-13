@@ -27,3 +27,13 @@ export const chatMessagesTable = pgTable("chat_messages", {
   tool: varchar({ length: 20 }).notNull(),
   createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 });
+
+export const aiDesignCartItemsTable = pgTable("ai_design_cart_items", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userEmail: varchar({ length: 255 }).notNull(),
+  mode: varchar({ length: 20 }).notNull(),
+  prompt: text(),
+  sketchUrl: text(),
+  outputUrl: text().notNull(),
+  createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+});
