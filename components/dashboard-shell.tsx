@@ -11,20 +11,36 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard/customize", label: "Customize", icon: Palette },
+  { 
+    href: "/dashboard/customize", 
+    label: "Customize", 
+    icon: Palette 
+  },
   {
     href: "/dashboard/ai-design-studio",
     label: "AI Design Studio",
     icon: Sparkles,
   },
-  { href: "/dashboard/ai-chat", label: "AI Chat", icon: MessageSquareText },
+  { 
+    href: "/dashboard/ai-chat", 
+    label: "AI Chat", 
+    icon: MessageSquareText 
+  },
   {
     href: "/dashboard/invest-in-gold",
     label: "Invest in Gold",
     icon: BadgeIndianRupee,
   },
-  { href: "/dashboard/profile", label: "Profile", icon: UserRound },
-  { href: "/dashboard/cart", label: "Cart", icon: ShoppingBag },
+  { 
+    href: "/dashboard/profile", 
+    label: "Profile", 
+    icon: UserRound 
+  },
+  { 
+    href: "/dashboard/cart", 
+    label: "Cart", 
+    icon: ShoppingBag 
+  },
 ];
 
 type DashboardShellProps = {
