@@ -6,6 +6,7 @@ import { EB_Garamond } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Provider from "./Provider";
 import { shadcn } from "@clerk/themes";
+import { Toaster } from "@/components/ui/sonner";
 
 const ebGaramond = EB_Garamond({
   subsets: ["latin"],
@@ -45,6 +46,7 @@ export default function RootLayout({
           <Provider>
             {children}
           </Provider>
+          <Toaster richColors position="bottom-right" />
         </body>
       </html>
     </ClerkProvider>
