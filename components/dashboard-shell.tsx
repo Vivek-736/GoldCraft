@@ -9,6 +9,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
+import { DashboardCreditsPill } from "@/components/dashboard-credits-pill";
 
 const navItems = [
   { 
@@ -106,8 +107,11 @@ export function DashboardShell({
               })}
             </nav>
 
-            <div className="rounded-full border border-white/50 bg-white/60 p-1.5 shadow-sm">
-              <UserButton />
+            <div className="flex items-center gap-2">
+              <DashboardCreditsPill />
+              <div className="rounded-full border border-white/50 bg-white/60 p-1.5 shadow-sm">
+                <UserButton />
+              </div>
             </div>
           </div>
         </div>

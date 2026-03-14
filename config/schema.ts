@@ -7,6 +7,8 @@ export const usersTable = pgTable("users", {
   email: varchar({ length: 255 }).notNull().unique(),
   phoneNumber: varchar({ length: 30 }),
   address: text(),
+  credits: integer().notNull().default(4),
+  creditsUpdatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 });
 
 export const chatsTable = pgTable("chats", {

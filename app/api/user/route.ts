@@ -23,6 +23,8 @@ export async function POST(request: Request) {
                 imageUrl: imageUrl,
                 phoneNumber: phoneNumber ?? null,
                 address: normalizedAddress,
+                credits: 4,
+                creditsUpdatedAt: new Date(),
             }).returning();
 
             return NextResponse.json(result[0]);
