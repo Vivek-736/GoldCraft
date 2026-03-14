@@ -21,8 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 type CartItem = {
@@ -57,6 +55,26 @@ type PuterEstimate = {
   summary?: string;
 };
 
+type EstimateBreakdown = {
+  rate24kPerGram: number;
+  rate22kPerGram: number;
+  weightGrams: number;
+  makingChargePercent: number;
+  makingCharge: number;
+  baseMetalCost22k: number;
+  subTotal: number;
+  gstPercent: number;
+  gstAmount: number;
+  grandTotal: number;
+  complexityScore: number;
+};
+
+type ImageDesignMetrics = {
+  complexityScore: number;
+  coverageScore: number;
+  toneVariance: number;
+};
+
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => {
@@ -73,6 +91,7 @@ function formatINR(value: number) {
   }).format(value);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function readPuterTextContent(content: unknown): string {
   if (typeof content === "string") {
     return content;
@@ -103,6 +122,7 @@ function readPuterTextContent(content: unknown): string {
   return "";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractJsonObject(text: string): PuterEstimate | null {
   const match = text.match(/\{[\s\S]*\}/);
 
@@ -117,25 +137,300 @@ function extractJsonObject(text: string): PuterEstimate | null {
   }
 }
 
-function calculateFormulaEstimate({
-  goldRatePerGram,
-  weightGrams,
-  karat,
-  makingChargePercent,
-  wastagePercent,
-}: {
-  goldRatePerGram: number;
-  weightGrams: number;
-  karat: number;
-  makingChargePercent: number;
-  wastagePercent: number;
-}) {
-  const purityFactor = karat / 24;
-  const baseMetalCost = goldRatePerGram * weightGrams * purityFactor;
-  const makingCharge = (baseMetalCost * makingChargePercent) / 100;
-  const wastageCost = (baseMetalCost * wastagePercent) / 100;
+function roundCurrency(value: number) {
+  return Math.round(value);
+}
 
-  return Math.round(baseMetalCost + makingCharge + wastageCost);
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+type JewelleryCategory =
+  | "ring"
+  | "earring"
+  | "pendant"
+  | "bracelet"
+  | "necklace"
+  | "generic";
+
+function detectJewelleryCategory(text: string): JewelleryCategory {
+  if (text.includes("ring")) {
+    return "ring";
+  }
+
+  if (text.includes("earring") || text.includes("ear ring") || text.includes("stud")) {
+    return "earring";
+  }
+
+  if (text.includes("pendant") || text.includes("locket")) {
+    return "pendant";
+  }
+
+  if (text.includes("bracelet") || text.includes("bangle") || text.includes("kada")) {
+    return "bracelet";
+  }
+
+  if (
+    text.includes("necklace") ||
+    text.includes("choker") ||
+    text.includes("chain") ||
+    text.includes("mangalsutra")
+  ) {
+    return "necklace";
+  }
+
+  return "generic";
+}
+
+function hashText(input: string) {
+  let hash = 0;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 31 + input.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+async function analyzeImageDesign(imageUrl: string): Promise<ImageDesignMetrics> {
+  try {
+    const response = await fetch(imageUrl, { cache: "no-store" });
+
+    if (!response.ok) {
+      return {
+        complexityScore: 0.55,
+        coverageScore: 0.45,
+        toneVariance: 0.4,
+      };
+    }
+
+    const blob = await response.blob();
+    const bitmap = await createImageBitmap(blob);
+
+    const canvas = document.createElement("canvas");
+    const width = 220;
+    const height = 220;
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return {
+        complexityScore: 0.55,
+        coverageScore: 0.45,
+        toneVariance: 0.4,
+      };
+    }
+
+    context.drawImage(bitmap, 0, 0, width, height);
+    const imageData = context.getImageData(0, 0, width, height).data;
+
+    let edgeAccumulator = 0;
+    let jewelryEdgeAccumulator = 0;
+    let samples = 0;
+    let jewelryPixelCount = 0;
+    let luminanceSum = 0;
+    let luminanceSqSum = 0;
+
+    for (let y = 1; y < height; y += 2) {
+      for (let x = 1; x < width; x += 2) {
+        const index = (y * width + x) * 4;
+        const leftIndex = (y * width + (x - 1)) * 4;
+        const topIndex = ((y - 1) * width + x) * 4;
+
+        const lum =
+          0.2126 * imageData[index] +
+          0.7152 * imageData[index + 1] +
+          0.0722 * imageData[index + 2];
+
+        const leftLum =
+          0.2126 * imageData[leftIndex] +
+          0.7152 * imageData[leftIndex + 1] +
+          0.0722 * imageData[leftIndex + 2];
+
+        const topLum =
+          0.2126 * imageData[topIndex] +
+          0.7152 * imageData[topIndex + 1] +
+          0.0722 * imageData[topIndex + 2];
+
+        const red = imageData[index] / 255;
+        const green = imageData[index + 1] / 255;
+        const blue = imageData[index + 2] / 255;
+        const maxChannel = Math.max(red, green, blue);
+        const minChannel = Math.min(red, green, blue);
+        const saturation = maxChannel === 0 ? 0 : (maxChannel - minChannel) / maxChannel;
+
+        const isJewelryPixel = lum < 242 || saturation > 0.06;
+
+        if (isJewelryPixel) {
+          jewelryPixelCount += 1;
+          luminanceSum += lum;
+          luminanceSqSum += lum * lum;
+        }
+
+        edgeAccumulator += Math.abs(lum - leftLum) + Math.abs(lum - topLum);
+
+        if (isJewelryPixel) {
+          jewelryEdgeAccumulator += Math.abs(lum - leftLum) + Math.abs(lum - topLum);
+        }
+
+        samples += 2;
+      }
+    }
+
+    if (!samples) {
+      return {
+        complexityScore: 0.55,
+        coverageScore: 0.45,
+        toneVariance: 0.4,
+      };
+    }
+
+    const totalPixels = (width / 2) * (height / 2);
+    const coverageRaw = totalPixels > 0 ? jewelryPixelCount / totalPixels : 0.12;
+    const coverageScore = clamp(coverageRaw * 4.2, 0.15, 0.98);
+
+    const normalizedEdge = edgeAccumulator / (samples * 255);
+    const jewelryEdgeNorm = jewelryPixelCount
+      ? jewelryEdgeAccumulator / (jewelryPixelCount * 255 * 2)
+      : normalizedEdge;
+
+    const meanLum = jewelryPixelCount ? luminanceSum / jewelryPixelCount : 160;
+    const variance = jewelryPixelCount
+      ? Math.max(luminanceSqSum / jewelryPixelCount - meanLum * meanLum, 0)
+      : 1500;
+    const toneVariance = clamp(Math.sqrt(variance) / 80, 0.2, 0.95);
+
+    const complexityScore = clamp(
+      normalizedEdge * 0.35 + jewelryEdgeNorm * 0.35 + coverageScore * 0.2 + toneVariance * 0.1,
+      0.2,
+      0.98,
+    );
+
+    return {
+      complexityScore: Number(complexityScore.toFixed(3)),
+      coverageScore: Number(coverageScore.toFixed(3)),
+      toneVariance: Number(toneVariance.toFixed(3)),
+    };
+  } catch {
+    return {
+      complexityScore: 0.55,
+      coverageScore: 0.45,
+      toneVariance: 0.4,
+    };
+  }
+}
+
+function estimateWeightFromDesign({
+  designMetrics,
+  mode,
+  prompt,
+  outputUrl,
+}: {
+  designMetrics: ImageDesignMetrics;
+  mode: string;
+  prompt: string | null;
+  outputUrl: string;
+}) {
+  const text = `${mode} ${prompt ?? ""}`.toLowerCase();
+  const category = detectJewelleryCategory(text);
+  const signature = hashText(outputUrl);
+  const perItemOffset = ((signature % 13) - 6) / 10;
+
+  const ranges: Record<JewelleryCategory, { base: number; min: number; max: number }> = {
+    ring: { base: 4.4, min: 2.8, max: 8.2 },
+    earring: { base: 5.9, min: 3.5, max: 12.5 },
+    pendant: { base: 6.7, min: 4.0, max: 15.0 },
+    bracelet: { base: 12.0, min: 7.5, max: 28.0 },
+    necklace: { base: 22.0, min: 12.0, max: 55.0 },
+    generic: { base: 7.2, min: 4.2, max: 18.0 },
+  };
+
+  const selectedRange = ranges[category];
+
+  const complexityNorm = clamp((designMetrics.complexityScore - 0.2) / 0.78, 0, 1);
+  const coverageNorm = clamp((designMetrics.coverageScore - 0.15) / 0.83, 0, 1);
+  const toneNorm = clamp((designMetrics.toneVariance - 0.2) / 0.75, 0, 1);
+
+  let baseWeight =
+    selectedRange.base +
+    complexityNorm * 1.8 +
+    coverageNorm * 1.9 +
+    toneNorm * 0.9 +
+    perItemOffset;
+
+  if (text.includes("stone") || text.includes("diamond") || text.includes("kundan")) {
+    baseWeight += category === "ring" ? 0.35 : 0.7;
+  }
+
+  if (text.includes("heavy") || text.includes("bridal") || text.includes("statement")) {
+    baseWeight += category === "necklace" ? 2.8 : 1.4;
+  }
+
+  if (text.includes("minimal") || text.includes("sleek") || text.includes("lightweight") || text.includes("daily")) {
+    baseWeight -= category === "necklace" ? 1.8 : 0.9;
+  }
+
+  return clamp(Number(baseWeight.toFixed(2)), selectedRange.min, selectedRange.max);
+}
+
+function deriveGoldRates(payload?: GoldRateResponse & { error?: string }) {
+  const DEFAULT_24K = 16000;
+  const DEFAULT_22K = 15000;
+
+  const fromGram = Number(payload?.gram);
+  const fromTenGram = Number(payload?.tenGram);
+
+  let rate24 = Number.isFinite(fromGram) && fromGram > 10000
+    ? fromGram
+    : Number.isFinite(fromTenGram) && fromTenGram > 100000
+      ? fromTenGram / 10
+      : DEFAULT_24K;
+
+  rate24 = Math.max(rate24, DEFAULT_24K);
+  const rate22 = Math.max((rate24 * 22) / 24, DEFAULT_22K);
+
+  return {
+    rate24kPerGram: roundCurrency(rate24),
+    rate22kPerGram: roundCurrency(rate22),
+  };
+}
+
+function buildEstimateBreakdown({
+  rate24kPerGram,
+  rate22kPerGram,
+  weightGrams,
+  complexityScore,
+  makingChargePercent,
+}: {
+  rate24kPerGram: number;
+  rate22kPerGram: number;
+  weightGrams: number;
+  complexityScore: number;
+  makingChargePercent: number;
+}): EstimateBreakdown {
+  const gstPercent = 3;
+
+  const baseMetalCost22k = roundCurrency(rate22kPerGram * weightGrams);
+  const makingCharge = roundCurrency((baseMetalCost22k * makingChargePercent) / 100);
+  const subTotal = baseMetalCost22k + makingCharge;
+  const gstAmount = roundCurrency((subTotal * gstPercent) / 100);
+  const grandTotal = subTotal + gstAmount;
+
+  return {
+    rate24kPerGram,
+    rate22kPerGram,
+    weightGrams,
+    makingChargePercent: Number(makingChargePercent.toFixed(1)),
+    makingCharge,
+    baseMetalCost22k,
+    subTotal,
+    gstPercent,
+    gstAmount,
+    grandTotal,
+    complexityScore: Number(complexityScore.toFixed(3)),
+  };
 }
 
 async function loadRazorpayScript() {
@@ -169,10 +464,8 @@ export function CartClient({
   const [message, setMessage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [estimateItem, setEstimateItem] = useState<CartItem | null>(null);
-  const [weightGrams, setWeightGrams] = useState("10");
-  const [karat, setKarat] = useState("22");
-  const [makingChargePercent, setMakingChargePercent] = useState("12");
-  const [wastagePercent, setWastagePercent] = useState("3");
+  const [estimateBreakdown, setEstimateBreakdown] =
+    useState<EstimateBreakdown | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
@@ -270,35 +563,15 @@ export function CartClient({
 
   const openEstimateDialog = (item: CartItem) => {
     setEstimateItem(item);
-    setWeightGrams(item.estimatedWeightGrams ?? "10");
-    setKarat("22");
-    setMakingChargePercent("12");
-    setWastagePercent("3");
+    setEstimateBreakdown(null);
     setError(null);
     setMessage(null);
   };
 
-  const runEstimate = async () => {
-    if (!estimateItem) {
-      return;
-    }
+  const runEstimate = async (itemArg?: CartItem) => {
+    const targetItem = itemArg ?? estimateItem;
 
-    const parsedWeight = Number(weightGrams);
-    const parsedKarat = Number(karat);
-    const parsedMaking = Number(makingChargePercent);
-    const parsedWastage = Number(wastagePercent);
-
-    if (
-      !Number.isFinite(parsedWeight) ||
-      parsedWeight <= 0 ||
-      !Number.isFinite(parsedKarat) ||
-      parsedKarat <= 0 ||
-      !Number.isFinite(parsedMaking) ||
-      parsedMaking < 0 ||
-      !Number.isFinite(parsedWastage) ||
-      parsedWastage < 0
-    ) {
-      setError("Please enter valid estimation inputs.");
+    if (!targetItem) {
       return;
     }
 
@@ -315,73 +588,65 @@ export function CartClient({
           error?: string;
         };
 
-      if (!goldRateResponse.ok || !Number.isFinite(goldRatePayload.gram)) {
+      if (!goldRateResponse.ok) {
         throw new Error(
           goldRatePayload.error ?? "Unable to fetch current gold rate.",
         );
       }
 
-      const formulaEstimate = calculateFormulaEstimate({
-        goldRatePerGram: goldRatePayload.gram,
-        weightGrams: parsedWeight,
-        karat: parsedKarat,
-        makingChargePercent: parsedMaking,
-        wastagePercent: parsedWastage,
+      const designMetrics = await analyzeImageDesign(targetItem.outputUrl);
+      const estimatedWeightGrams = estimateWeightFromDesign({
+        designMetrics,
+        mode: targetItem.mode,
+        prompt: targetItem.prompt,
+        outputUrl: targetItem.outputUrl,
       });
 
-      const { default: puter } = await import("@heyputer/puter.js");
-      const estimationPrompt = [
-        "Estimate Indian jewellery selling price in INR using given inputs.",
-        "Return ONLY strict JSON with keys: estimatedCostInr (number), summary (string).",
-        `Gold rate per gram INR: ${goldRatePayload.gram.toFixed(2)}`,
-        `Weight grams: ${parsedWeight}`,
-        `Karat: ${parsedKarat}`,
-        `Making charge percent: ${parsedMaking}`,
-        `Wastage percent: ${parsedWastage}`,
-        `Design context: ${estimateItem.prompt?.trim() || "No prompt provided."}`,
-        `Formula baseline estimate INR: ${formulaEstimate}`,
-        "Keep estimate rough and realistic for premium handcrafted jewellery.",
-      ].join("\n");
-
-      const aiResponse = await puter.ai.chat(estimationPrompt, {
-        model: "gemini-2.5-flash",
-        temperature: 0.2,
-      });
-
-      const textContent = readPuterTextContent(aiResponse?.message?.content);
-      const parsedAi = extractJsonObject(textContent);
-      const estimatedCostInr = Math.round(
-        Number(parsedAi?.estimatedCostInr) > 0
-          ? Number(parsedAi?.estimatedCostInr)
-          : formulaEstimate,
+      const makingChargePercent = clamp(
+        14 + designMetrics.complexityScore * 8 + designMetrics.coverageScore * 8,
+        14,
+        30,
       );
 
+      const { rate24kPerGram, rate22kPerGram } = deriveGoldRates(goldRatePayload);
+
+      const breakdown = buildEstimateBreakdown({
+        rate24kPerGram,
+        rate22kPerGram,
+        weightGrams: estimatedWeightGrams,
+        complexityScore: designMetrics.complexityScore,
+        makingChargePercent,
+      });
+
+      const estimatedCostInr = breakdown.grandTotal;
+
+      setEstimateBreakdown(breakdown);
+
       const estimateMeta = JSON.stringify({
-        source: "puter-gemini",
-        model: "gemini-2.5-flash",
+        source: "goldcraft-auto-estimator",
+        model: "formula+image-analysis",
         summary:
-          typeof parsedAi?.summary === "string" && parsedAi.summary.trim()
-            ? parsedAi.summary.trim()
-            : "AI provided a rough estimate based on current gold spot rate and craftsmanship factors.",
+          "Auto-estimate based on analyzed design complexity, inferred gross weight, current 24k/22k rates, making charges, and GST.",
         assumptions: {
-          goldRatePerGram: goldRatePayload.gram,
-          tenGramRate: goldRatePayload.tenGram,
-          weightGrams: parsedWeight,
-          karat: parsedKarat,
-          makingChargePercent: parsedMaking,
-          wastagePercent: parsedWastage,
-          formulaEstimate,
+          coverageScore: designMetrics.coverageScore,
+          toneVariance: designMetrics.toneVariance,
+          complexityScore: breakdown.complexityScore,
+          weightGrams: breakdown.weightGrams,
+          rate24kPerGram: breakdown.rate24kPerGram,
+          rate22kPerGram: breakdown.rate22kPerGram,
+          makingChargePercent: breakdown.makingChargePercent,
+          gstPercent: breakdown.gstPercent,
         },
       });
 
       const saveResponse = await fetch(
-        `/api/ai-design-studio/cart/${estimateItem.id}/estimate`,
+        `/api/ai-design-studio/cart/${targetItem.id}/estimate`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             estimatedCostInr,
-            estimatedWeightGrams: String(parsedWeight),
+            estimatedWeightGrams: String(breakdown.weightGrams),
             estimateMeta,
           }),
         },
@@ -416,6 +681,15 @@ export function CartClient({
       setIsEstimating(false);
     }
   };
+
+  useEffect(() => {
+    if (!estimateItem) {
+      return;
+    }
+
+    void runEstimate(estimateItem);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimateItem?.id]);
 
   const handleCheckout = async () => {
     if (!profileComplete) {
@@ -773,56 +1047,90 @@ export function CartClient({
           }
         }}
       >
-        <DialogContent className="border-amber-200 bg-[#fffdf8] sm:max-w-lg">
+        <DialogContent className="border-amber-200 bg-[#fffdf8] sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Rough jewellery cost estimate</DialogTitle>
             <DialogDescription>
-              Uses live gold price, gram-based math, and GoldCraft AI to save an
-              approximate value.
+              Auto-calculated from your design image + live gold rates with no manual inputs.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="weightGrams">Weight (grams)</Label>
-              <Input
-                id="weightGrams"
-                type="number"
-                min="0"
-                value={weightGrams}
-                onChange={(event) => setWeightGrams(event.target.value)}
-              />
+          <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+            <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
+              {estimateItem ? (
+                <Image
+                  src={estimateItem.outputUrl}
+                  alt="Estimate design preview"
+                  width={900}
+                  height={900}
+                  className="h-72 w-full object-cover"
+                  unoptimized
+                />
+              ) : null}
+              <div className="border-t border-amber-100 px-4 py-3 text-sm text-slate-600">
+                {estimateItem?.prompt?.trim() || "AI jewelry design"}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="karat">Purity (karat)</Label>
-              <Input
-                id="karat"
-                type="number"
-                min="1"
-                max="24"
-                value={karat}
-                onChange={(event) => setKarat(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="makingPercent">Making charge %</Label>
-              <Input
-                id="makingPercent"
-                type="number"
-                min="0"
-                value={makingChargePercent}
-                onChange={(event) => setMakingChargePercent(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="wastagePercent">Wastage %</Label>
-              <Input
-                id="wastagePercent"
-                type="number"
-                min="0"
-                value={wastagePercent}
-                onChange={(event) => setWastagePercent(event.target.value)}
-              />
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                <span>Product details</span>
+                <span className="text-center">Rate</span>
+                <span className="text-center">Weight</span>
+                <span className="text-center">%</span>
+                <span className="text-right">Value</span>
+              </div>
+
+              {estimateBreakdown ? (
+                <>
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center border-b border-slate-200 px-4 py-4 text-sm text-slate-700">
+                    <div>
+                      <p className="font-semibold text-slate-900">Yellow Gold</p>
+                      <p className="text-xs text-slate-500">22KT</p>
+                    </div>
+                    <p className="text-center font-medium">₹ {estimateBreakdown.rate22kPerGram}/g</p>
+                    <p className="text-center font-medium">{estimateBreakdown.weightGrams.toFixed(2)}g</p>
+                    <p className="text-center">-</p>
+                    <p className="text-right font-semibold">₹ {estimateBreakdown.baseMetalCost22k.toLocaleString("en-IN")}</p>
+                  </div>
+
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center border-b border-slate-200 px-4 py-3 text-sm text-slate-700">
+                    <p>Making Charges</p>
+                    <p className="text-center">-</p>
+                    <p className="text-center">-</p>
+                    <p className="text-center">{estimateBreakdown.makingChargePercent.toFixed(1)}%</p>
+                    <p className="text-right font-semibold">₹ {estimateBreakdown.makingCharge.toLocaleString("en-IN")}</p>
+                  </div>
+
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center border-b border-slate-200 px-4 py-3 text-sm text-slate-700">
+                    <p>Sub Total</p>
+                    <p className="text-center">-</p>
+                    <p className="text-center">{estimateBreakdown.weightGrams.toFixed(2)}g Gross Wt.</p>
+                    <p className="text-center">-</p>
+                    <p className="text-right font-semibold">₹ {estimateBreakdown.subTotal.toLocaleString("en-IN")}</p>
+                  </div>
+
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center border-b border-slate-200 px-4 py-3 text-sm text-slate-700">
+                    <p>GST</p>
+                    <p className="text-center">-</p>
+                    <p className="text-center">-</p>
+                    <p className="text-center">{estimateBreakdown.gstPercent}%</p>
+                    <p className="text-right font-semibold">₹ {estimateBreakdown.gstAmount.toLocaleString("en-IN")}</p>
+                  </div>
+
+                  <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center px-4 py-4 text-base font-semibold text-slate-900">
+                    <p>Grand Total</p>
+                    <p className="col-span-3 text-right text-sm font-normal text-slate-600">
+                      24KT Ref: ₹ {estimateBreakdown.rate24kPerGram}/g
+                    </p>
+                    <p className="text-right text-2xl">₹ {estimateBreakdown.grandTotal.toLocaleString("en-IN")}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="px-4 py-14 text-center text-sm text-slate-500">
+                  {isEstimating ? "Analyzing design and calculating estimate..." : "Estimate will appear here."}
+                </div>
+              )}
             </div>
           </div>
 
@@ -836,17 +1144,19 @@ export function CartClient({
 
           <DialogFooter>
             <Button
-              onClick={runEstimate}
+              onClick={() => {
+                void runEstimate();
+              }}
               disabled={isEstimating}
               className="rounded-full bg-amber-800 text-white hover:bg-amber-900"
             >
               {isEstimating ? (
                 <>
                   <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Estimating
+                  Recalculating
                 </>
               ) : (
-                "Save rough estimate"
+                "Recalculate & save"
               )}
             </Button>
           </DialogFooter>
