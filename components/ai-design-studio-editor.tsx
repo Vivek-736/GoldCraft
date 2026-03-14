@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ImageIcon,
   Loader2,
+  PlusCircle,
   ShoppingBag,
   Sparkles,
   Upload,
@@ -17,6 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
@@ -29,8 +38,69 @@ type UploadedSketchResponse = {
   fileUrl: string;
 };
 
+type CreditBalanceResponse = {
+  credits?: number;
+  error?: string;
+};
+
+type CreditsConsumeResponse = {
+  credits?: number;
+  consumed?: number;
+  error?: string;
+};
+
+type CreditsOrderResponse = {
+  keyId?: string;
+  order?: { id: string; amount: number; currency: string };
+  amountInr?: number;
+  credits?: number;
+  error?: string;
+};
+
+type CreditsVerifyResponse = {
+  success?: boolean;
+  credits?: number;
+  creditsAdded?: number;
+  error?: string;
+};
+
 const PUTER_PROVIDER = "gemini";
 const PUTER_IMAGE_MODEL = "gemini-2.5-flash-image-preview";
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+    };
+  }
+}
+
+function toneForCredits(credits: number) {
+  if (credits <= 1) {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+
+  if (credits <= 2) {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+async function loadRazorpayScript() {
+  if (window.Razorpay) {
+    return true;
+  }
+
+  return new Promise<boolean>((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 function readErrorMessage(payload: unknown, fallback: string) {
   if (
@@ -191,6 +261,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isBuyingCredits, setIsBuyingCredits] = useState(false);
+  const [credits, setCredits] = useState<number>(4);
+  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [savedToCart, setSavedToCart] = useState(false);
 
   const previewUrl = outputUrl ?? sketchDataUrl ?? sketchUrl;
@@ -199,6 +272,130 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       ? Boolean(sketchDataUrl ?? sketchUrl) && !isUploading && !isGenerating
       : prompt.trim().length > 0 && !isGenerating;
   const canSave = Boolean(outputUrl) && !isSaving;
+
+  async function loadCredits() {
+    try {
+      const response = await fetch("/api/credits/balance", {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as CreditBalanceResponse;
+
+      if (response.ok && Number.isFinite(payload.credits)) {
+        setCredits(Number(payload.credits));
+      }
+    } catch {
+      // Ignore non-blocking credits load failure.
+    }
+  }
+
+  async function consumeCreditOrThrow() {
+    const response = await fetch("/api/credits/consume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "ai-design-generate" }),
+    });
+
+    const payload = (await response.json()) as CreditsConsumeResponse;
+
+    if (!response.ok) {
+      if (Number.isFinite(payload.credits)) {
+        setCredits(Number(payload.credits));
+      }
+
+      if (response.status === 402) {
+        setShowCreditsDialog(true);
+      }
+
+      throw new Error(readErrorMessage(payload, "Not enough credits."));
+    }
+
+    if (Number.isFinite(payload.credits)) {
+      setCredits(Number(payload.credits));
+    }
+  }
+
+  async function buyCredits(creditsToBuy: number) {
+    setIsBuyingCredits(true);
+
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+
+      if (!scriptLoaded || !window.Razorpay) {
+        throw new Error("Unable to load Razorpay checkout.");
+      }
+
+      const orderResponse = await fetch("/api/credits/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          credits: creditsToBuy,
+        }),
+      });
+
+      const orderPayload = (await orderResponse.json()) as CreditsOrderResponse;
+
+      if (!orderResponse.ok || !orderPayload.keyId || !orderPayload.order) {
+        throw new Error(
+          orderPayload.error ?? "Unable to start credits checkout.",
+        );
+      }
+
+      const razorpay = new window.Razorpay({
+        key: orderPayload.keyId,
+        amount: orderPayload.order.amount,
+        currency: orderPayload.order.currency,
+        name: "GoldCraft Credits",
+        description: `Buy ${creditsToBuy} credit${creditsToBuy > 1 ? "s" : ""}`,
+        order_id: orderPayload.order.id,
+        theme: {
+          color: "#b45309",
+        },
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          const verifyResponse = await fetch("/api/credits/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response),
+          });
+
+          const verifyPayload =
+            (await verifyResponse.json()) as CreditsVerifyResponse;
+
+          if (!verifyResponse.ok || !verifyPayload.success) {
+            throw new Error(
+              verifyPayload.error ??
+                "Payment verified but credits update failed.",
+            );
+          }
+
+          if (Number.isFinite(verifyPayload.credits)) {
+            setCredits(Number(verifyPayload.credits));
+          }
+
+          setShowCreditsDialog(false);
+          toast.success(
+            `${verifyPayload.creditsAdded ?? creditsToBuy} credit${(verifyPayload.creditsAdded ?? creditsToBuy) > 1 ? "s" : ""} added.`,
+          );
+        },
+      });
+
+      razorpay.open();
+    } catch (purchaseError) {
+      const purchaseMessage =
+        purchaseError instanceof Error
+          ? purchaseError.message
+          : "Unable to buy credits right now.";
+      setError(purchaseMessage);
+      toast.error(purchaseMessage);
+    } finally {
+      setIsBuyingCredits(false);
+    }
+  }
 
   async function handleUpload(file: File) {
     setIsUploading(true);
@@ -223,7 +420,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(readErrorMessage(payload, "Failed to upload the sketch."));
+        throw new Error(
+          readErrorMessage(payload, "Failed to upload the sketch."),
+        );
       }
 
       const uploaded = payload as UploadedSketchResponse;
@@ -236,9 +435,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
         uploadError instanceof Error
           ? uploadError.message
           : "Failed to upload the sketch.";
-      setError(
-        uploadMessage,
-      );
+      setError(uploadMessage);
       toast.error(uploadMessage);
     } finally {
       setIsUploading(false);
@@ -252,6 +449,8 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     setSavedToCart(false);
 
     try {
+      await consumeCreditOrThrow();
+
       const generatedImage = await generateStudioImage({
         mode,
         prompt,
@@ -273,6 +472,10 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       setIsGenerating(false);
     }
   }
+
+  useEffect(() => {
+    void loadCredits();
+  }, []);
 
   async function handleSaveToCart() {
     if (!outputUrl) {
@@ -300,7 +503,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(readErrorMessage(payload, "Failed to save this design."));
+        throw new Error(
+          readErrorMessage(payload, "Failed to save this design."),
+        );
       }
 
       const persistedOutputUrl = readSavedOutputUrl(payload);
@@ -314,10 +519,10 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       toast.success("Saved to cart.");
     } catch (saveError) {
       const saveMessage =
-        saveError instanceof Error ? saveError.message : "Failed to save this design.";
-      setError(
-        saveMessage,
-      );
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save this design.";
+      setError(saveMessage);
       toast.error(saveMessage);
     } finally {
       setIsSaving(false);
@@ -366,7 +571,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                   )}
                 </div>
                 <h2 className="mt-4 text-lg font-semibold text-slate-950">
-                  {sketchDataUrl || sketchUrl ? "Sketch ready" : "Drop image here"}
+                  {sketchDataUrl || sketchUrl
+                    ? "Sketch ready"
+                    : "Drop image here"}
                 </h2>
                 <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
                   {sketchName ?? "Drag and drop or choose a file."}
@@ -406,6 +613,12 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
           )}
 
           <div className="flex flex-wrap items-center gap-3">
+            <div
+              className={`inline-flex h-9 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em] ${toneForCredits(credits)}`}
+            >
+              {credits} Credits
+            </div>
+
             <Button
               type="button"
               onClick={() => void handleGenerate()}
@@ -435,7 +648,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
             ) : null}
           </div>
 
-          {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+          {message ? (
+            <p className="text-sm text-emerald-700">{message}</p>
+          ) : null}
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         </CardContent>
       </Card>
@@ -458,7 +673,11 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewUrl}
-                alt={outputUrl ? "Generated jewelry visual" : "Uploaded sketch preview"}
+                alt={
+                  outputUrl
+                    ? "Generated jewelry visual"
+                    : "Uploaded sketch preview"
+                }
                 className="h-full max-h-105 w-full rounded-[1.2rem] object-contain"
               />
             ) : (
@@ -471,7 +690,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                   )}
                 </div>
                 <p className="mt-5 text-sm font-medium text-slate-700">
-                  {mode === "upload" ? "No preview yet" : "Nothing generated yet"}
+                  {mode === "upload"
+                    ? "No preview yet"
+                    : "Nothing generated yet"}
                 </p>
               </div>
             )}
@@ -497,6 +718,53 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
+        <DialogContent className="border-amber-200 bg-[#fffdf8] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Insufficient credits</DialogTitle>
+            <DialogDescription>
+              You need credits to generate visuals. One generation uses one
+              credit.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/40 p-4 text-sm text-amber-900">
+            <p>
+              Current balance:{" "}
+              <span className="font-semibold">{credits} credits</span>
+            </p>
+            <p>
+              Pricing: <span className="font-semibold">₹100 per credit</span>
+            </p>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void buyCredits(1);
+              }}
+              disabled={isBuyingCredits}
+              className="rounded-full border-amber-200"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Buy 1 Credit (₹100)
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                void buyCredits(4);
+              }}
+              disabled={isBuyingCredits}
+              className="rounded-full bg-amber-800 text-white hover:bg-amber-900"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Buy 4 Credits (₹400)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
