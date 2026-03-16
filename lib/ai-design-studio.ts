@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/config/db";
 import { aiDesignCartItemsTable } from "@/config/schema";
 
-export type AIDesignMode = "upload" | "design";
+export type AIDesignMode = "upload" | "custom";
 
 type SaveAIDesignInput = {
   userEmail: string;
