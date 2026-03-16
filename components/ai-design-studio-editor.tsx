@@ -396,6 +396,36 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     });
   }
 
+  async function fetchAsDataUrl(url: string): Promise<string> {
+    const response = await fetch(url, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    return blobToDataUrl(blob);
+  }
+
+  function toBase64Payload(dataUrl: string) {
+    const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
+
+    if (!match) {
+      throw new Error("Invalid source image payload.");
+    }
+
+    const [, mimeType, base64Data] = match;
+
+    if (!mimeType || !base64Data) {
+      throw new Error("Invalid source image payload.");
+    }
+
+    return {
+      mimeType,
+      base64Data,
+    };
+  }
+
   async function puterTextToText(promptText: string) {
     const { default: puter } = await import("@heyputer/puter.js");
 
@@ -520,20 +550,31 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       await puter.auth.signIn();
     }
 
+    if (!sketchImageSource.trim()) {
+      throw new Error("Upload a sketch before generating.");
+    }
+
+    const sketchDataUrl = sketchImageSource.startsWith("data:")
+      ? sketchImageSource
+      : await fetchAsDataUrl(sketchImageSource);
+
+    const { mimeType, base64Data } = toBase64Payload(sketchDataUrl);
+
     const primaryOptions = {
-      model: "gemini-2.5-flash-preview",
+      provider: "gemini",
+      model: "gemini-2.5-flash-image-preview",
       prompt: finalPrompt,
-      ...(sketchImageSource.startsWith("data:image/")
-        ? { image_base64: sketchImageSource }
-        : { image_url: sketchImageSource }),
+      input_image: base64Data,
+      input_image_mime_type: mimeType,
+      ratio: { w: 1024, h: 1024 },
     };
 
     const fallbackOptions = {
+      provider: "gemini",
       model: "gemini-2.5-flash-image-preview",
       prompt: finalPrompt,
-      ...(sketchImageSource.startsWith("data:image/")
-        ? { image_base64: sketchImageSource }
-        : { image_url: sketchImageSource }),
+      image_base64: sketchDataUrl,
+      ratio: { w: 1024, h: 1024 },
     };
 
     let puterResult:
@@ -697,7 +738,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
         mode === "upload"
           ? await generateUploadWithPuter(
               finalPrompt,
-              sketchUrl ?? sketchDataUrl ?? "",
+              sketchDataUrl ?? sketchUrl ?? "",
             )
           : await generateImageFromPrompt(finalPrompt);
 
