@@ -510,22 +510,57 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     return payload.outputUrl;
   }
 
-  async function generateUploadWithPuter(finalPrompt: string) {
+  async function generateUploadWithPuter(
+    finalPrompt: string,
+    sketchImageSource: string,
+  ) {
     const { default: puter } = await import("@heyputer/puter.js");
 
     if (!puter.auth.isSignedIn()) {
       await puter.auth.signIn();
     }
 
-    const puterResult = (await puter.ai.txt2img(finalPrompt, {
+    const primaryOptions = {
+      model: "gemini-2.5-flash-preview",
+      prompt: finalPrompt,
+      ...(sketchImageSource.startsWith("data:image/")
+        ? { image_base64: sketchImageSource }
+        : { image_url: sketchImageSource }),
+    };
+
+    const fallbackOptions = {
       model: "gemini-2.5-flash-image-preview",
-    })) as
+      prompt: finalPrompt,
+      ...(sketchImageSource.startsWith("data:image/")
+        ? { image_base64: sketchImageSource }
+        : { image_url: sketchImageSource }),
+    };
+
+    let puterResult:
       | string
       | Blob
       | PuterLikeResult
       | PuterLikeResult[]
       | null
       | undefined;
+
+    try {
+      puterResult = (await puter.ai.txt2img(primaryOptions)) as
+        | string
+        | Blob
+        | PuterLikeResult
+        | PuterLikeResult[]
+        | null
+        | undefined;
+    } catch {
+      puterResult = (await puter.ai.txt2img(fallbackOptions)) as
+        | string
+        | Blob
+        | PuterLikeResult
+        | PuterLikeResult[]
+        | null
+        | undefined;
+    }
 
     if (typeof puterResult === "string") {
       return puterResult;
@@ -660,7 +695,10 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
       const generatedImage =
         mode === "upload"
-          ? await generateUploadWithPuter(finalPrompt)
+          ? await generateUploadWithPuter(
+              finalPrompt,
+              sketchUrl ?? sketchDataUrl ?? "",
+            )
           : await generateImageFromPrompt(finalPrompt);
 
       setOutputUrl(generatedImage);
