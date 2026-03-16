@@ -965,9 +965,9 @@ export function CartClient({
 
                 <div className="mt-4 space-y-2">
                   <div className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">
-                    {item.mode}
+                    {item.mode === "design" ? "custom" : item.mode}
                   </div>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="text-sm leading-6 text-slate-900">
                     {item.prompt?.trim() || "Saved without a prompt."}
                   </p>
                   <p className="text-sm font-medium text-amber-900">

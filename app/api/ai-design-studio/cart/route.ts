@@ -23,9 +23,11 @@ export async function POST(request: Request) {
 
     const { mode, prompt, sketchUrl, outputUrl } = await request.json();
 
-    if (mode !== "upload" && mode !== "design") {
+    if (mode !== "upload" && mode !== "custom" && mode !== "design") {
       return NextResponse.json({ error: "Invalid mode." }, { status: 400 });
     }
+
+    const normalizedMode = mode === "upload" ? "upload" : "custom";
 
     const outputValue = typeof outputUrl === "string" ? outputUrl.trim() : "";
 
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
 
     const savedItem = await saveAIDesignToCart({
       userEmail: primaryEmail,
-      mode,
+      mode: normalizedMode,
       prompt: typeof prompt === "string" ? prompt.trim() || null : null,
       sketchUrl: typeof sketchUrl === "string" ? sketchUrl : null,
       outputUrl: persistedOutputUrl,

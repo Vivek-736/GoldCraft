@@ -48,8 +48,15 @@ export function DashboardCreditsPill() {
 
     void load();
 
+    const handleCreditsUpdated = () => {
+      void load();
+    };
+
+    window.addEventListener("credits:updated", handleCreditsUpdated);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("credits:updated", handleCreditsUpdated);
     };
   }, []);
 
