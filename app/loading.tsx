@@ -2,146 +2,109 @@
 
 import styled from 'styled-components';
 
-const Loading = () => {
+const Loader = () => {
   return (
-    <StyledWrapper className="min-h-screen flex items-center justify-center">
-      <div>
-        <div className="container">
-          <div className="dot dot-1" />
-          <div className="dot dot-2" />
-          <div className="dot dot-3" />
+    <StyledWrapper className='min-h-screen flex items-center justify-center'>
+      <div className="loader">
+        <div className="text">
+          <div className="ball" />
         </div>
-        <svg version="1.1" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="goo">
-              <feGaussianBlur result="blur" stdDeviation={10} in="SourceGraphic" />
-              <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 21 -7" mode="matrix" in="blur" />
-            </filter>
-          </defs>
-        </svg>
+        <span><i /></span>
       </div>
     </StyledWrapper>
   );
 }
 
 const StyledWrapper = styled.div`
-  .container {
-    width: 200px;
-    height: 200px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: auto;
-    filter: url("#goo");
-    animation: rotate-move 2s ease-in-out infinite;
+  .loader {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .dot {
-    width: 70px;
-    height: 70px;
+  .loader span {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    background-color: #eaeef0;
+    border: 6px solid #eaeef0;
+    box-shadow:
+      -8px -8px 15px rgba(255, 255, 255, 1),
+      8px 8px 25px rgba(0, 0, 0, 0.15);
     border-radius: 50%;
-    background-color: #000;
+    overflow: hidden;
+  }
+
+  .loader span:before {
+    content: "LOADING";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: #bbb9b9;
+    letter-spacing: 3px;
+    font-size: 23px;
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: auto;
+    inset: 40px;
+    background-color: #eaeef0;
+    box-shadow:
+      -8px -8px 25px rgba(255, 255, 255, 1),
+      8px 8px 25px rgba(0, 0, 0, 0.15),
+      inset 3px 3px 10px rgba(0, 0, 0, 0.1),
+      inset -1px -1px 15px rgba(255, 255, 255, 1);
+    border: 2px solid #eaeef0;
+    border-radius: 50%;
+    z-index: 1;
   }
 
-  .dot-3 {
-    background-color: #ff1717;
-    animation: dot-3-move 2s ease infinite, index 6s ease infinite;
+  .loader span i {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(#42abff, #ff4f8b, #ffeb4b);
+    border-radius: 50%;
+    filter: blur(5px);
+    animation: animate 1s linear infinite;
   }
 
-  .dot-2 {
-    background-color: #0051ff;
-    animation: dot-2-move 2s ease infinite, index 6s -4s ease infinite;
-  }
+  @keyframes animate {
+    0% {
+      transform: rotate(0deg);
+    }
 
-  .dot-1 {
-    background-color: #ffc400;
-    animation: dot-1-move 2s ease infinite, index 6s -2s ease infinite;
-  }
-
-  @keyframes dot-3-move {
-    20% {
-      transform: scale(1);
-    }
-    45% {
-      transform: translateY(-18px) scale(0.45);
-    }
-    60% {
-      transform: translateY(-90px) scale(0.45);
-    }
-    80% {
-      transform: translateY(-90px) scale(0.45);
-    }
     100% {
-      transform: translateY(0px) scale(1);
+      transform: rotate(360deg);
     }
   }
 
-  @keyframes dot-2-move {
-    20% {
-      transform: scale(1);
+  .text {
+    position: absolute;
+    width: 279px;
+    height: 279px;
+    border-radius: 50%;
+    animation: animateText 6s linear infinite;
+  }
+
+  @keyframes animateText {
+    0% {
+      transform: rotate(360deg);
     }
-    45% {
-      transform: translate(-16px, 12px) scale(0.45);
-    }
-    60% {
-      transform: translate(-80px, 60px) scale(0.45);
-    }
-    80% {
-      transform: translate(-80px, 60px) scale(0.45);
-    }
+
     100% {
-      transform: translateY(0px) scale(1);
+      transform: rotate(0deg);
     }
   }
 
-  @keyframes dot-1-move {
-    20% {
-      transform: scale(1);
-    }
-    45% {
-      transform: translate(16px, 12px) scale(0.45);
-    }
-    60% {
-      transform: translate(80px, 60px) scale(0.45);
-    }
-    80% {
-      transform: translate(80px, 60px) scale(0.45);
-    }
-    100% {
-      transform: translateY(0px) scale(1);
-    }
-  }
-
-  @keyframes rotate-move {
-    55% {
-      transform: translate(-50%, -50%) rotate(0deg);
-    }
-    80% {
-      transform: translate(-50%, -50%) rotate(360deg);
-    }
-    100% {
-      transform: translate(-50%, -50%) rotate(360deg);
-    }
-  }
-
-  @keyframes index {
-    0%,
-    100% {
-      z-index: 3;
-    }
-    33.3% {
-      z-index: 2;
-    }
-    66.6% {
-      z-index: 1;
-    }
+  .ball {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(#42abff, #ff4f8b, #ffeb4b);
+    border: 6px solid #dfdfdf;
+    border-radius: 50%;
+    box-shadow:
+      -8px -8px 15px rgba(255, 255, 255, 1),
+      8px 8px 25px rgba(0, 0, 0, 0.15);
+    animation: rotate 3s infinite linear;
   }`;
 
-export default Loading;
+export default Loader;
