@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useUser } from "@clerk/nextjs";
 export function SiteHeader() {
   const router = useRouter();
   const { isSignedIn } = useUser();
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -37,54 +38,6 @@ export function SiteHeader() {
             >
               Home
             </Link>
-
-            <div className="group relative">
-              <button className="text-sm font-medium text-slate-900 hover:text-amber-700 transition-colors flex items-center gap-1 py-2">
-                Products
-                <ChevronDown className="w-3 h-3 group-hover:rotate-180 transition-transform duration-300" />
-              </button>
-
-              <div className="absolute top-full left-0 pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 -translate-y-2 group-hover:translate-y-0 z-50">
-                <div className="bg-white rounded-xl shadow-xl border border-slate-100 p-2 flex flex-col relative overflow-hidden">
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Rings & Solitaires
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Necklaces & Pendants
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Bracelets & Bangles
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Earrings
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Nose Rings
-                  </Link>
-                  <Link
-                    href="#faq"
-                    className="block px-4 py-2 text-sm text-slate-600 hover:text-amber-900 hover:bg-amber-50 rounded-lg transition-colors"
-                  >
-                    Custom Designs
-                  </Link>
-                </div>
-              </div>
-            </div>
             <Link
               href="#discover"
               className="text-sm font-medium hover:text-amber-700 transition-colors scroll-smooth"
@@ -161,39 +114,6 @@ export function SiteHeader() {
           >
             Home
           </Link>
-          <div className="py-2 border-b border-gray-100">
-            <p className="mb-4 text-amber-900 font-bold">Products</p>
-            <div className="grid grid-cols-2 gap-4 text-base pl-2">
-              <Link
-                href="#faq"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-slate-600"
-              >
-                Rings
-              </Link>
-              <Link
-                href="#faq"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-slate-600"
-              >
-                Necklaces
-              </Link>
-              <Link
-                href="#faq"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-slate-600"
-              >
-                Bracelets
-              </Link>
-              <Link
-                href="#faq"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-slate-600"
-              >
-                Earrings
-              </Link>
-            </div>
-          </div>
           <Link
             href="#discover"
             className="hover:text-amber-700 transition-colors"
