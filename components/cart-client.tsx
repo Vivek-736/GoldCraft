@@ -397,6 +397,8 @@ function deriveGoldRates(payload?: GoldRateResponse & { error?: string }) {
   };
 }
 
+const FIXED_MAKING_CHARGE_PERCENT = 15;
+
 function buildEstimateBreakdown({
   rate24kPerGram,
   rate22kPerGram,
@@ -602,11 +604,7 @@ export function CartClient({
         outputUrl: targetItem.outputUrl,
       });
 
-      const makingChargePercent = clamp(
-        14 + designMetrics.complexityScore * 8 + designMetrics.coverageScore * 8,
-        14,
-        30,
-      );
+      const makingChargePercent = FIXED_MAKING_CHARGE_PERCENT;
 
       const { rate24kPerGram, rate22kPerGram } = deriveGoldRates(goldRatePayload);
 
@@ -1098,8 +1096,8 @@ export function CartClient({
                     <p>Making Charges</p>
                     <p className="text-center">-</p>
                     <p className="text-center">-</p>
-                    <p className="text-center">{estimateBreakdown.makingChargePercent.toFixed(1)}%</p>
-                    <p className="text-right font-semibold">₹ {estimateBreakdown.makingCharge.toLocaleString("en-IN")}</p>
+                    <p className="text-center">-</p>
+                    <p className="text-right font-semibold">-</p>
                   </div>
 
                   <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1.2fr] items-center border-b border-slate-200 px-4 py-3 text-sm text-slate-700">

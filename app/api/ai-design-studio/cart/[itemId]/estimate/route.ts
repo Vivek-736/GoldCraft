@@ -2,6 +2,77 @@ import { NextResponse } from "next/server";
 import { saveAIDesignEstimate } from "@/lib/ai-design-studio";
 import { auth, currentUser } from "@clerk/nextjs/server";
 
+const FIXED_MAKING_CHARGE_PERCENT = 15;
+const DEFAULT_GST_PERCENT = 3;
+
+function toFiniteNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeEstimateMeta(estimateMeta: string) {
+  if (!estimateMeta) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(estimateMeta) as {
+      assumptions?: Record<string, unknown>;
+      [key: string]: unknown;
+    };
+
+    if (!parsed || typeof parsed !== "object") {
+      return estimateMeta;
+    }
+
+    return JSON.stringify({
+      ...parsed,
+      assumptions: {
+        ...(parsed.assumptions ?? {}),
+        makingChargePercent: FIXED_MAKING_CHARGE_PERCENT,
+      },
+    });
+  } catch {
+    return estimateMeta;
+  }
+}
+
+function computeEstimatedCostFromMeta(estimateMeta: string) {
+  if (!estimateMeta) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(estimateMeta) as {
+      assumptions?: Record<string, unknown>;
+    };
+    const assumptions = parsed?.assumptions;
+
+    if (!assumptions) {
+      return null;
+    }
+
+    const rate22kPerGram = toFiniteNumber(assumptions.rate22kPerGram);
+    const weightGrams = toFiniteNumber(assumptions.weightGrams);
+    const gstPercent =
+      toFiniteNumber(assumptions.gstPercent) ?? DEFAULT_GST_PERCENT;
+
+    if (!rate22kPerGram || !weightGrams || gstPercent < 0) {
+      return null;
+    }
+
+    const baseMetalCost = rate22kPerGram * weightGrams;
+    const makingCharge =
+      (baseMetalCost * FIXED_MAKING_CHARGE_PERCENT) / 100;
+    const subTotal = baseMetalCost + makingCharge;
+    const gstAmount = (subTotal * gstPercent) / 100;
+
+    return Math.round(subTotal + gstAmount);
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ itemId: string }> },
@@ -34,8 +105,12 @@ export async function POST(
     const estimatedCostInr = Number(payload?.estimatedCostInr);
     const estimatedWeightGrams = String(payload?.estimatedWeightGrams ?? "").trim();
     const estimateMeta = String(payload?.estimateMeta ?? "").trim();
+    const normalizedEstimateMeta = normalizeEstimateMeta(estimateMeta);
+    const computedEstimatedCostInr =
+      computeEstimatedCostFromMeta(normalizedEstimateMeta);
+    const finalEstimatedCostInr = computedEstimatedCostInr ?? estimatedCostInr;
 
-    if (!Number.isFinite(estimatedCostInr) || estimatedCostInr <= 0) {
+    if (!Number.isFinite(finalEstimatedCostInr) || finalEstimatedCostInr <= 0) {
       return NextResponse.json(
         { error: "Estimated cost must be a positive number." },
         { status: 400 },
@@ -52,9 +127,9 @@ export async function POST(
     const saved = await saveAIDesignEstimate({
       id: parsedId,
       userEmail: email,
-      estimatedCostInr: Math.round(estimatedCostInr),
+      estimatedCostInr: Math.round(finalEstimatedCostInr),
       estimatedWeightGrams,
-      estimateMeta,
+      estimateMeta: normalizedEstimateMeta,
     });
 
     if (!saved) {
