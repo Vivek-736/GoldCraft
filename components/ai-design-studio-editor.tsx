@@ -207,6 +207,7 @@ function extractPuterChatText(payload: unknown): string {
         "content" in message
           ? (message as { content?: unknown }).content
           : null;
+
       if (Array.isArray(content)) {
         const joined = content
           .map((part) => {
@@ -386,6 +387,74 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       behavior: "smooth",
     });
   }, [chatMessages, isChatLoading, designFlow]);
+
+  useEffect(() => {
+    if (mode !== "design" || designFlow !== "chat") {
+      return;
+    }
+
+    const chatInputElement = document.querySelector<HTMLTextAreaElement>(
+      'textarea[data-ai-design-chat-input="true"]',
+    );
+
+    if (!chatInputElement) {
+      return;
+    }
+
+    const handleChatEnterToSend = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || event.isComposing || event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (isChatLoading || !chatInput.trim()) {
+        return;
+      }
+
+      void sendChatMessage();
+    };
+
+    chatInputElement.addEventListener("keydown", handleChatEnterToSend);
+
+    return () => {
+      chatInputElement.removeEventListener("keydown", handleChatEnterToSend);
+    };
+  }, [mode, designFlow, isChatLoading, chatInput]);
+
+  useEffect(() => {
+    if (mode !== "upload") {
+      return;
+    }
+
+    const uploadPromptElement = document.querySelector<HTMLTextAreaElement>(
+      'textarea[data-ai-upload-prompt="true"]',
+    );
+
+    if (!uploadPromptElement) {
+      return;
+    }
+
+    const handleUploadEnterToGenerate = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" || event.isComposing || event.shiftKey) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (!canGenerate) {
+        return;
+      }
+
+      void handleGenerate();
+    };
+
+    uploadPromptElement.addEventListener("keydown", handleUploadEnterToGenerate);
+
+    return () => {
+      uploadPromptElement.removeEventListener("keydown", handleUploadEnterToGenerate);
+    };
+  }, [mode, canGenerate]);
 
   async function blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -1017,6 +1086,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                   Optional suggestion
                 </p>
                 <Textarea
+                  data-ai-upload-prompt="true"
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
                   placeholder="Add a short prompt or styling note for this sketch."
@@ -1225,6 +1295,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
                   <div className="mt-3 space-y-2">
                     <Textarea
+                      data-ai-design-chat-input="true"
                       value={chatInput}
                       onChange={(event) => setChatInput(event.target.value)}
                       placeholder="Describe your ornament idea..."
