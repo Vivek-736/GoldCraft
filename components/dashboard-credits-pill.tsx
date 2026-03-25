@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { BuyCreditsDialog } from "@/components/buy-credits-dialog";
 
 type BalanceResponse = {
   credits?: number;
@@ -21,6 +22,7 @@ function toneForCredits(credits: number) {
 
 export function DashboardCreditsPill() {
   const [credits, setCredits] = useState<number | null>(null);
+  const [showBuyDialog, setShowBuyDialog] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,11 +69,24 @@ export function DashboardCreditsPill() {
   }, [displayCredits]);
 
   return (
-    <div
-      className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em] ${toneClassName}`}
-      title={`${displayCredits} credits remaining`}
-    >
-      {displayCredits} Credits
+    <div className="flex items-center gap-3">
+      <div
+        className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold uppercase tracking-[0.12em] ${toneClassName}`}
+        title={`${displayCredits} credits remaining`}
+      >
+        {displayCredits} Credits
+      </div>
+      
+      {displayCredits === 0 && (
+        <button 
+          onClick={() => setShowBuyDialog(true)}
+          className="text-xs font-semibold px-3 h-8 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition"
+        >
+          Upgrade
+        </button>
+      )}
+
+      <BuyCreditsDialog open={showBuyDialog} onOpenChange={setShowBuyDialog} />
     </div>
   );
 }
