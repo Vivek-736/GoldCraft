@@ -1,5 +1,6 @@
 <div align="center">
   <h1>🌟 GoldCraft: Precision 3D Jewelry Customization</h1>
+  
   <p>
     <strong>Elevate Your Vision with AI-Powered 3D Craftsmanship</strong>
   </p>
@@ -39,74 +40,6 @@
 - **Clerk Integration**: Enterprise-grade authentication and user session management.
 - **User Dashboard**: Manage your personalized design cart, design history, and credits.
 - **Admin Command Center**: A dedicated oversight panel for managing user requests and orders.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend** | Next.js 15 (App Router), React 19, TypeScript |
-| **Styling** | Tailwind CSS 4, Framer Motion, GSAP |
-| **3D Engine** | Three.js, React Three Fiber, GLTFLoader |
-| **Database** | Neon (PostgreSQL), Drizzle ORM |
-| **Auth** | Clerk |
-| **File Storage** | UploadThing |
-| **AI Engine** | Puter.js |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+ (Preferably 20+)
-- A Neon PostgreSQL Database
-- Clerk API keys
-- UploadThing API keys
-
-### Installation
-
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/your-username/gold-craft.git
-    cd gold-craft
-    ```
-
-2.  **Install Dependencies**:
-    ```bash
-    npm install
-    # or
-    bun install
-    ```
-
-3.  **Environment Setup**:
-    Create a `.env` file in the root directory and add the following:
-    ```env
-    # Database
-    DATABASE_URL=postgresql://...
-
-    # Clerk Auth
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-    CLERK_SECRET_KEY=sk_test_...
-
-    # UploadThing
-    UPLOADTHING_SECRET=sk_live_...
-    UPLOADTHING_APP_ID=...
-    ```
-
-4.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
-
----
-
-## 🎨 Design Philosophy
-
-GoldCraft adheres to a **Luxury Dark/Light Contrast** aesthetic, featuring:
-- **Primary Palette**: Deep Slate and Radiant Amber (Gold).
-- **Typography**: A balanced mix of **EB Garamond** (Serif) for elegance and **Montserrat** (Sans-Serif) for modern readability.
-- **Interactivity**: Micro-animations and glassmorphism elements to provide a premium tactile feel.
 
 ---
 
