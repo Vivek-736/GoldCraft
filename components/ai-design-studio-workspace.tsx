@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Sparkles, Upload } from "lucide-react";
-import { AIDesignStudioEditor } from "@/components/ai-design-studio-editor";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AIDesignStudioEditor } from "@/components/ai-design-studio-editor";
+import { ArrowLeft, ArrowRight, Sparkles, Upload } from "lucide-react";
 
 type StudioWorkspaceProps = {
   mode: "upload" | "design";
@@ -16,21 +16,25 @@ type StudioWorkspaceProps = {
 
 export function AIDesignStudioWorkspace({ mode }: StudioWorkspaceProps) {
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-350 flex-col overflow-x-hidden px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-start">
+    <div className="fixed inset-0 z-100 flex h-screen w-screen flex-col overflow-hidden bg-[#F8F6F2] text-slate-900">
+      <div className="absolute left-6 top-6 z-110 flex items-center">
         <Button
           asChild
           variant="outline"
-          className="rounded-full border-slate-200 bg-white/90 px-4 text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          className="rounded-full border-[#E6C27A]/30 bg-white/80 px-5 backdrop-blur-md text-sm font-medium text-[#0F172A] shadow-sm transition-all duration-300 hover:border-[#D4A95A] hover:bg-white hover:shadow-[#E6C27A]/20"
         >
           <Link href="/dashboard/ai-design-studio">
-            <ArrowLeft className="h-4 w-4" />
-            Studio
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Exit Studio
           </Link>
         </Button>
       </div>
 
-      <div className="mt-6 flex min-h-0 flex-1">
+      <div className="absolute right-8 top-8 z-110 hidden opacity-30 sm:flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-[#D4A95A]" />
+        <span className="font-serif text-sm font-semibold tracking-widest text-[#0F172A]">GOLDCRAFT AI</span>
+      </div>
+      <div className="flex h-full min-h-0 w-full flex-1 pt-20 pb-6 px-6 sm:px-8 lg:px-12">
         <AIDesignStudioEditor mode={mode} />
       </div>
     </div>
