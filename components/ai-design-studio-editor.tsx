@@ -6,13 +6,14 @@ import {
   ImageIcon,
   Languages,
   Loader2,
-  MessageCircle,
   Mic,
   MicOff,
   ShoppingBag,
   Sparkles,
   Upload,
-  Wand2,
+  Bot,
+  User,
+  ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +23,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Input } from "./ui/input";
 
 type AIDesignStudioEditorProps = {
   mode: "upload" | "design";
@@ -80,10 +87,10 @@ type SpeechRecognitionType = {
   start: () => void;
   stop: () => void;
   onresult:
-    | ((event: {
-        results: ArrayLike<ArrayLike<{ transcript: string }>>;
-      }) => void)
-    | null;
+  | ((event: {
+    results: ArrayLike<ArrayLike<{ transcript: string }>>;
+  }) => void)
+  | null;
   onerror: ((event: { error?: string }) => void) | null;
 };
 
@@ -291,10 +298,29 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
   const [plainPrompt, setPlainPrompt] = useState("");
   const [isCorrectingPrompt, setIsCorrectingPrompt] = useState(false);
 
-  const [guidedType, setGuidedType] = useState("ring");
-  const [guidedStoneColor, setGuidedStoneColor] = useState("emerald green");
-  const [guidedMetalTone, setGuidedMetalTone] = useState("yellow gold");
-  const [guidedStyle, setGuidedStyle] = useState("minimal luxury");
+  const [guidedStep, setGuidedStep] = useState(1);
+  const [guidedAnswers, setGuidedAnswers] = useState<{
+    item?: string;
+    target?: string;
+    style?: string;
+    gemstones?: string;
+    customDetails?: string;
+  }>({});
+  const [guidedCustomInput, setGuidedCustomInput] = useState("");
+  const guidedScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setLoadingStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingStep((current) => (current + 1) % 4);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -325,7 +351,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     }
 
     if (designFlow === "guided") {
-      return !isGenerating;
+      return guidedStep > 5 && !isGenerating;
     }
 
     return chatPrompt.trim().length > 0 && !isGenerating;
@@ -338,6 +364,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     plainPrompt,
     sketchDataUrl,
     sketchUrl,
+    guidedStep,
   ]);
 
   useEffect(() => {
@@ -387,6 +414,17 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       behavior: "smooth",
     });
   }, [chatMessages, isChatLoading, designFlow]);
+
+  useEffect(() => {
+    if (!guidedScrollRef.current || designFlow !== "guided") {
+      return;
+    }
+
+    guidedScrollRef.current.scrollTo({
+      top: guidedScrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [guidedStep, designFlow]);
 
   useEffect(() => {
     if (mode !== "design" || designFlow !== "chat") {
@@ -735,13 +773,65 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
   function buildGuidedPrompt() {
     return [
-      `Create a premium ${guidedType}.`,
-      `Metal tone: ${guidedMetalTone}.`,
-      `Stone color: ${guidedStoneColor}.`,
-      `Style: ${guidedStyle}.`,
-      "Render polished gold, realistic gemstone lighting, luxury off-white studio background, no text watermark or props.",
-    ].join(" ");
+      `Create a premium ${guidedAnswers.target ? guidedAnswers.target.toLowerCase() + " " : ""}${guidedAnswers.item ? guidedAnswers.item.toLowerCase() : "jewelry piece"}.`,
+      guidedAnswers.style ? `Style Motif: ${guidedAnswers.style}.` : "",
+      guidedAnswers.gemstones && guidedAnswers.gemstones !== "No Stones" ? `Gemstones: ${guidedAnswers.gemstones}.` : "No gemstones, pure solid metal.",
+      guidedAnswers.customDetails && guidedAnswers.customDetails.toLowerCase() !== "none" ? `Custom Details: ${guidedAnswers.customDetails}.` : "",
+      "Render polished gold, realistic lighting, luxury off-white studio background, no text watermark or props.",
+    ].filter(Boolean).join(" ");
   }
+
+  const guidedMessages = useMemo(() => {
+    const messages: Array<{ role: "bot" | "user"; text: string; options?: string[]; step?: number; allowInput?: boolean }> = [];
+
+    messages.push({ role: "bot", text: "I'll help you design your perfect piece! Step 1/5: What item would you like to create?", options: ["Ring", "Necklace", "Earrings", "Bracelet", "Pendant"], step: 1 });
+    if (guidedStep > 1) {
+      messages.push({ role: "user", text: guidedAnswers.item ?? "" });
+      messages.push({ role: "bot", text: `Great choice! Who is this ${guidedAnswers.item?.toLowerCase()} for?`, options: ["Ladies", "Mens", "Unisex", "Kids"], step: 2 });
+    }
+    if (guidedStep > 2) {
+      messages.push({ role: "user", text: guidedAnswers.target ?? "" });
+      messages.push({ role: "bot", text: "Do you have a specific style or motif in mind? Select or type your own.", options: ["Floral", "Geometric", "Minimalist", "Vintage", "Butterfly", "Letter/Initial"], step: 3, allowInput: true });
+    }
+    if (guidedStep > 3) {
+      messages.push({ role: "user", text: guidedAnswers.style ?? "" });
+      messages.push({ role: "bot", text: "Would you like to add any gemstones?", options: ["Diamond", "Ruby", "Emerald", "Sapphire", "No Stones", "Multi-colored"], step: 4 });
+    }
+    if (guidedStep > 4) {
+      messages.push({ role: "user", text: guidedAnswers.gemstones ?? "" });
+      messages.push({ role: "bot", text: "Almost done! Any final custom details? (e.g., 'Thin band', 'Engraving', 'Matte finish') or just say 'None'.", step: 5, allowInput: true });
+    }
+    if (guidedStep > 5) {
+      messages.push({ role: "user", text: guidedAnswers.customDetails ?? "" });
+      messages.push({ role: "bot", text: `Perfect! Your design prompt is ready:\n\n"${buildGuidedPrompt()}"\n\nClick 'Generate Custom Visual' to see your creation.`, step: 6 });
+    }
+
+    return messages;
+  }, [guidedStep, guidedAnswers]);
+
+  const handleGuidedOptionSelect = (option: string) => {
+    switch (guidedStep) {
+      case 1:
+        setGuidedAnswers((prev) => ({ ...prev, item: option }));
+        break;
+      case 2:
+        setGuidedAnswers((prev) => ({ ...prev, target: option }));
+        break;
+      case 3:
+        setGuidedAnswers((prev) => ({ ...prev, style: option }));
+        break;
+      case 4:
+        setGuidedAnswers((prev) => ({ ...prev, gemstones: option }));
+        break;
+      case 5:
+        setGuidedAnswers((prev) => ({ ...prev, customDetails: option }));
+        break;
+    }
+    setGuidedStep((prev) => prev + 1);
+    setGuidedCustomInput("");
+  };
+
+  const currentGuidedMessage = guidedMessages[guidedMessages.length - 1];
 
   async function handleGenerate() {
     setIsGenerating(true);
@@ -806,9 +896,9 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
       const generatedImage =
         mode === "upload"
           ? await generateUploadWithPuter(
-              finalPrompt,
-              sketchDataUrl ?? sketchUrl ?? "",
-            )
+            finalPrompt,
+            sketchDataUrl ?? sketchUrl ?? "",
+          )
           : await generateImageFromPrompt(finalPrompt);
 
       setOutputUrl(generatedImage);
@@ -1025,22 +1115,22 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
   }
 
   return (
-    <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-2">
-      <Card className="flex h-full min-h-0 min-w-0 flex-col rounded-[1.9rem] border-amber-200/90 bg-[#fffdf8] shadow-[0_20px_50px_rgba(15,23,42,0.05)]">
-        <CardHeader className="px-6 py-5 md:px-8 md:py-6">
-          <CardTitle className="text-2xl text-slate-950">
-            {mode === "upload" ? "Upload" : "Design It Your Way"}
+    <div className="grid h-full min-h-0 w-full flex-1 gap-6 lg:grid-cols-[48%_52%] pb-4 relative z-10 overflow-hidden">
+      <Card className="flex h-full min-h-0 min-w-0 flex-col rounded-[2rem] border border-[#E6C27A]/40 bg-white/40 backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <CardHeader className="px-6 py-5 md:px-8 md:py-6 border-b border-[#E6C27A]/10">
+          <CardTitle className="font-serif text-3xl font-medium tracking-wide text-[#0F172A]">
+            {mode === "upload" ? "Upload Sketch" : "Design Studio"}
           </CardTitle>
-          <CardDescription className="text-sm leading-6 text-slate-600">
+          <CardDescription className="text-sm leading-6 text-slate-600 max-w-sm">
             {mode === "upload"
-              ? "Upload a sketch and generate a polished jewelry concept."
-              : "Choose plain prompt, guided flow, or AI chat with voice to craft your final design prompt."}
+              ? "Upload a rough sketch and we'll craft a polished jewelry concept."
+              : "Choose a mode to craft your unique GoldCraft specification."}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 md:px-8 md:pb-8">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 pt-5 md:px-8 md:pb-8">
           {mode === "upload" ? (
-            <>
+            <div className="flex h-full flex-col gap-4">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1055,292 +1145,323 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                 }}
               />
 
-              <div className="flex min-h-55 w-full flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-amber-200 bg-amber-50/35 px-6 py-8 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[1.2rem] bg-white text-amber-800 shadow-sm">
-                  {isUploading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    <Upload className="h-6 w-6" />
-                  )}
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-slate-950">
-                  {sketchDataUrl || sketchUrl
-                    ? "Sketch ready"
-                    : "Drop image here"}
-                </h2>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">
-                  {sketchName ?? "Drag and drop or choose a file."}
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="mt-5 rounded-full bg-slate-900 px-6 text-white shadow-sm transition-colors hover:bg-slate-800"
-                >
-                  {isUploading ? "Uploading..." : "Choose File"}
-                </Button>
+              <div
+                className={`group flex min-h-[220px] flex-1 w-full cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-[#E6C27A]/30 bg-white/50 px-6 py-8 text-center transition-all duration-300 hover:border-[#D4A95A] hover:bg-[#D4A95A]/5 hover:shadow-[0_0_20px_rgba(212,169,90,0.15)] ${isUploading ? "pointer-events-none opacity-80" : ""
+                  }`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {sketchDataUrl || sketchUrl ? (
+                  <div className="relative flex h-full w-full flex-col items-center justify-center">
+                    <img
+                      src={(sketchDataUrl || sketchUrl) ?? ""}
+                      alt="Upload preview"
+                      className="max-h-[160px] w-auto rounded-xl object-contain shadow-sm ring-1 ring-black/5"
+                    />
+                    <div className="absolute -bottom-4 flex gap-2">
+                      <Button size="sm" variant="secondary" className="h-8 rounded-full bg-white text-xs font-semibold text-[#0F172A] shadow-sm hover:bg-slate-50">
+                        Replace
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSketchUrl(null);
+                          setSketchDataUrl(null);
+                          setPrompt("");
+                        }}
+                        className="h-8 rounded-full bg-white text-xs font-semibold text-rose-600 shadow-sm hover:bg-rose-50"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[1.2rem] bg-white text-[#D4A95A] shadow-sm transition-transform duration-300 group-hover:scale-110">
+                      {isUploading ? (
+                        <Loader2 className="h-7 w-7 animate-spin" />
+                      ) : (
+                        <Upload className="h-7 w-7" />
+                      )}
+                    </div>
+                    <h2 className="mt-5 font-serif text-lg font-medium text-[#0F172A]">
+                      Drop sketch here
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Click or drag and drop to upload
+                    </p>
+                  </>
+                )}
               </div>
 
-              <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-sm font-medium text-slate-700">
-                  Optional suggestion
+              <div className="rounded-[1.4rem] border border-[#E6C27A]/10 bg-white/60 p-4 shrink-0">
+                <p className="text-sm font-medium text-[#0F172A] mb-2 font-serif">
+                  Additional Details
                 </p>
                 <Textarea
                   data-ai-upload-prompt="true"
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Add a short prompt or styling note for this sketch."
-                  className="mt-3 min-h-24 rounded-3xl border-slate-200 bg-white text-sm shadow-none focus-visible:ring-amber-200"
+                  placeholder="Specify material, stone colors, or chain type..."
+                  className="min-h-6 rounded-2xl border-slate-200 bg-white/70 text-sm shadow-inner focus-visible:ring-[#D4A95A] resize-none"
                 />
               </div>
-            </>
+            </div>
           ) : (
-            <Tabs
-              value={designFlow}
-              onValueChange={(value) =>
-                setDesignFlow(value as "plain" | "guided" | "chat")
-              }
-            >
-              <TabsList className="w-full justify-start rounded-full bg-amber-50 p-1">
-                <TabsTrigger value="plain" className="rounded-full">
-                  Plain Prompt
-                </TabsTrigger>
-                <TabsTrigger value="guided" className="rounded-full">
-                  Guided Flow
-                </TabsTrigger>
-                <TabsTrigger value="chat" className="rounded-full">
-                  Chat + Voice
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="plain" className="mt-4 space-y-3">
-                <Textarea
-                  value={plainPrompt}
-                  onChange={(event) => setPlainPrompt(event.target.value)}
-                  placeholder="Elegant 22k gold ring with floral shank and oval emerald center stone."
-                  className="min-h-36 rounded-[1.2rem] border-slate-200 bg-white text-sm shadow-none focus-visible:ring-amber-200"
-                />
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void correctPromptGrammar()}
-                    disabled={isCorrectingPrompt || !plainPrompt.trim()}
-                    className="rounded-full border-amber-200"
-                  >
-                    {isCorrectingPrompt ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Correcting
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="h-4 w-4" />
-                        Correct Grammar
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent
-                value="guided"
-                className="mt-4 grid gap-3 sm:grid-cols-2"
+            <div className="flex flex-col h-full min-h-0 gap-4">
+              <Tabs
+                value={designFlow}
+                onValueChange={(value) =>
+                  setDesignFlow(value as "plain" | "guided" | "chat")
+                }
+                className="flex flex-col h-full min-h-0"
               >
-                <label className="space-y-1 text-sm text-slate-700">
-                  Ornament Type
-                  <select
-                    value={guidedType}
-                    onChange={(event) => setGuidedType(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option>ring</option>
-                    <option>necklace</option>
-                    <option>pendant</option>
-                    <option>waist chain</option>
-                    <option>bracelet</option>
-                    <option>ear ring</option>
-                    <option>nose ring</option>
-                    <option>anklet</option>
-                  </select>
-                </label>
+                <TabsList className="w-full shrink-0 justify-start rounded-full bg-white/60 border border-[#E6C27A]/20 p-1 shadow-sm">
+                  <TabsTrigger value="plain" className="rounded-full data-[state=active]:bg-linear-to-r data-[state=active]:from-[#E6C27A] data-[state=active]:to-[#D4A95A] data-[state=active]:text-white">
+                    Plain Prompt
+                  </TabsTrigger>
+                  <TabsTrigger value="guided" className="rounded-full data-[state=active]:bg-linear-to-r data-[state=active]:from-[#E6C27A] data-[state=active]:to-[#D4A95A] data-[state=active]:text-white">
+                    Guided Flow
+                  </TabsTrigger>
+                  <TabsTrigger value="chat" className="rounded-full data-[state=active]:bg-linear-to-r data-[state=active]:from-[#E6C27A] data-[state=active]:to-[#D4A95A] data-[state=active]:text-white">
+                    AI Concierge
+                  </TabsTrigger>
+                </TabsList>
 
-                <label className="space-y-1 text-sm text-slate-700">
-                  Stone Color
-                  <select
-                    value={guidedStoneColor}
-                    onChange={(event) =>
-                      setGuidedStoneColor(event.target.value)
-                    }
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option>emerald green</option>
-                    <option>ruby red</option>
-                    <option>sapphire blue</option>
-                    <option>diamond white</option>
-                    <option>champagne</option>
-                    <option>multi-color</option>
-                  </select>
-                </label>
+                <TabsContent value="plain" className="mt-0 pt-4 flex-1 flex flex-col min-h-0 gap-3">
+                  <div className="relative flex-1 min-h-0">
+                    <Textarea
+                      value={plainPrompt}
+                      onChange={(event) => setPlainPrompt(event.target.value)}
+                      placeholder="e.g., Elegant 22k gold ring with floral shank and an oval emerald center stone..."
+                      className="absolute inset-0 h-full w-full resize-none rounded-[1.2rem] border-slate-200 bg-white/70 text-sm shadow-inner focus-visible:ring-[#D4A95A] p-4 font-medium leading-relaxed"
+                    />
+                  </div>
 
-                <label className="space-y-1 text-sm text-slate-700">
-                  Metal Tone
-                  <select
-                    value={guidedMetalTone}
-                    onChange={(event) => setGuidedMetalTone(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option>yellow gold</option>
-                    <option>rose gold</option>
-                    <option>white gold</option>
-                    <option>dual tone gold</option>
-                  </select>
-                </label>
+                  <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                      <button onClick={() => setPlainPrompt("Minimalist ring in 18k rose gold")} className="shrink-0 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-600 transition-colors hover:border-[#D4A95A] hover:text-[#D4A95A]">
+                        Minimal Ring
+                      </button>
+                      <button onClick={() => setPlainPrompt("Traditional temple antique necklace")} className="shrink-0 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-600 transition-colors hover:border-[#D4A95A] hover:text-[#D4A95A]">
+                        Temple Jewelry
+                      </button>
+                      <button onClick={() => setPlainPrompt("Modern diamond fusion bracelet")} className="shrink-0 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-600 transition-colors hover:border-[#D4A95A] hover:text-[#D4A95A]">
+                        Diamond Fusion
+                      </button>
+                    </div>
 
-                <label className="space-y-1 text-sm text-slate-700">
-                  Style
-                  <select
-                    value={guidedStyle}
-                    onChange={(event) => setGuidedStyle(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    <option>minimal luxury</option>
-                    <option>traditional bridal</option>
-                    <option>temple style</option>
-                    <option>modern statement</option>
-                    <option>vintage filigree</option>
-                  </select>
-                </label>
-              </TabsContent>
+                    <Button
+                      type="button"
+                      onClick={() => void correctPromptGrammar()}
+                      disabled={isCorrectingPrompt || !plainPrompt.trim()}
+                      className="rounded-full bg-slate-900 border-none text-white overflow-hidden transition-all hover:bg-slate-800"
+                    >
+                      {isCorrectingPrompt ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 text-[#D4A95A] mr-2" />
+                      )}
+                      Enhance ✨
+                    </Button>
+                  </div>
+                </TabsContent>
 
-              <TabsContent value="chat" className="mt-4 space-y-3">
-                <div className="rounded-[1.2rem] border border-slate-200 bg-white p-3 sm:p-4">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                      Chat Assistant
-                    </p>
+                <TabsContent value="guided" className="mt-0 pt-4 flex flex-col flex-1 min-h-0">
+                  <div className="flex w-full items-center justify-between mb-2 px-2 relative shrink-0">
+                    <div className="absolute left-6 right-6 top-1/2 h-[2px] -translate-y-1/2 bg-slate-100 z-0"></div>
+                    <div className="absolute left-6 right-6 top-1/2 h-[2px] -translate-y-1/2 bg-linear-to-r from-[#E6C27A] to-[#D4A95A] z-0 transition-all duration-500 ease-in-out" style={{ width: `${Math.min(((Math.min(guidedStep, 6) - 1) / 5) * 100, 100)}%` }}></div>
+                    {[1, 2, 3, 4, 5, 6].map((step) => (
+                      <div key={step} className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-500 outline-4 outline-white ${guidedStep >= step ? "bg-linear-to-b from-[#E6C27A] to-[#D4A95A] text-white shadow-[0_0_10px_rgba(212,169,90,0.5)] scale-110" : "bg-white border-2 border-slate-200 text-slate-400"}`}>
+                        {step === 6 ? <Sparkles className="h-3.5 w-3.5" /> : step}
+                      </div>
+                    ))}
+                  </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-                        <Languages className="h-3.5 w-3.5" />
-                        <select
-                          value={chatLanguage}
-                          onChange={(event) => setChatLanguage(event.target.value)}
-                          aria-label="Chat language"
-                          className="bg-transparent text-xs outline-none"
-                        >
-                          <option>English</option>
-                          <option>Hindi</option>
-                          <option>Telugu</option>
-                          <option>Tamil</option>
-                          <option>Kannada</option>
-                          <option>Malayalam</option>
-                        </select>
-                      </label>
+                  <div className="relative mt-2 flex flex-col flex-1 min-h-0 rounded-[1.2rem] border border-[#E6C27A]/20 bg-white/60 p-2 sm:p-3 shadow-inner">
+                    <div
+                      ref={guidedScrollRef}
+                      className="flex-1 min-h-0 space-y-4 overflow-y-auto scroll-smooth p-2 pr-3 no-scrollbar"
+                    >
+                      {guidedMessages.map((msg, index) => {
+                        const isBot = msg.role === "bot";
+                        return (
+                          <div key={index} className={`flex gap-3 w-full transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-4 ${isBot ? "justify-start" : "justify-end"}`}>
+                            {isBot && (
+                              <div className="shrink-0 h-9 w-9 rounded-full bg-linear-to-br from-[#F8F6F2] to-[#E6C27A]/20 text-[#D4A95A] flex items-center justify-center mt-1 shadow-sm ring-1 ring-[#E6C27A]/30">
+                                <Bot className="h-5 w-5" />
+                              </div>
+                            )}
+                            <div className={`flex flex-col gap-3 ${isBot ? "items-start w-full" : "items-end max-w-[75%]"}`}>
+                              <div
+                                className={`px-4 py-3 text-[14px] leading-relaxed shadow-sm ${isBot
+                                  ? "bg-white border border-[#E6C27A]/10 text-slate-800 rounded-2xl rounded-tl-sm max-w-[90%]"
+                                  : "bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-white rounded-2xl rounded-tr-sm"
+                                  }`}
+                              >
+                                {msg.text}
+                              </div>
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsVoiceMode((current) => !current)}
-                        className="rounded-full border-amber-200"
-                      >
-                        {isVoiceMode ? (
-                          <Mic className="h-4 w-4" />
-                        ) : (
-                          <MicOff className="h-4 w-4" />
-                        )}
-                        {isVoiceMode ? "Voice On" : "Voice Off"}
-                      </Button>
+                              {isBot && msg.step === guidedStep && (
+                                <div className="flex flex-wrap gap-2 w-full pt-1 animate-in fade-in slide-in-from-left-2 duration-500">
+                                  {msg.options?.map((opt) => (
+                                    <button
+                                      key={opt}
+                                      onClick={() => handleGuidedOptionSelect(opt)}
+                                      className="px-4 py-2 bg-white hover:bg-[#D4A95A] text-slate-700 hover:text-white text-sm font-medium rounded-full transition-all shadow-sm ring-1 ring-slate-200 hover:ring-[#D4A95A] active:scale-95"
+                                    >
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {isBot && msg.step === guidedStep && msg.allowInput && (
+                                <div className="flex gap-2 w-full max-w-sm mt-2 animate-in fade-in slide-in-from-left-2 duration-500">
+                                  <Input
+                                    value={guidedCustomInput}
+                                    onChange={(e) => setGuidedCustomInput(e.target.value)}
+                                    placeholder="Type your own..."
+                                    className="h-11 rounded-full bg-white border-slate-200 text-sm shadow-sm focus-visible:border-[#D4A95A] focus-visible:ring-[#D4A95A]"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && guidedCustomInput.trim()) {
+                                        handleGuidedOptionSelect(guidedCustomInput.trim());
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    onClick={() => handleGuidedOptionSelect(guidedCustomInput.trim())}
+                                    disabled={!guidedCustomInput.trim()}
+                                    className="h-11 px-4 rounded-full bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-white hover:opacity-90 shadow-sm border-none"
+                                  >
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            {!isBot && (
+                              <div className="shrink-0 h-9 w-9 rounded-full bg-white text-slate-400 flex items-center justify-center mt-1 shadow-sm ring-1 ring-slate-200">
+                                <User className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
+                </TabsContent>
 
-                  <div
-                    ref={chatScrollRef}
-                    className="max-h-64 space-y-2 overflow-y-auto scroll-smooth rounded-3xl border border-slate-200 bg-slate-50/60 p-3"
-                  >
-                    {chatMessages.map((entry, index) => {
-                      const isUser = entry.role === "user";
+                <TabsContent value="chat" className="mt-0 pt-4 flex flex-col flex-1 min-h-0">
+                  <div className="relative flex flex-col flex-1 min-h-0 rounded-[1.2rem] border border-[#E6C27A]/20 bg-white/60 p-3 sm:p-4 shadow-inner">
+                    <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                      <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#D4A95A]">
+                        AI Concierge
+                      </p>
 
-                      return (
-                        <div
-                          key={`${entry.role}-${index}`}
-                          className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                        >
-                          <div
-                            className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                              isUser
-                                ? "bg-slate-100 text-slate-800"
-                                : "bg-amber-50 text-amber-900"
-                            }`}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                          <Languages className="h-3 w-3 text-[#D4A95A]" />
+                          <select
+                            value={chatLanguage}
+                            onChange={(event) => setChatLanguage(event.target.value)}
+                            aria-label="Chat language"
+                            className="bg-transparent text-xs outline-none"
                           >
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">
-                              {isUser ? "You" : "AI"}
-                            </p>
-                            <p className="mt-1 whitespace-pre-wrap leading-5">
-                              {entry.content}
-                            </p>
+                            <option>English</option>
+                            <option>Hindi</option>
+                            <option>Telugu</option>
+                            <option>Tamil</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div
+                      ref={chatScrollRef}
+                      className="flex-1 min-h-0 space-y-3 overflow-y-auto scroll-smooth p-2 no-scrollbar"
+                    >
+                      {chatMessages.map((entry, index) => {
+                        const isUser = entry.role === "user";
+
+                        return (
+                          <div
+                            key={`${entry.role}-${index}`}
+                            className={`flex gap-3 transition-opacity duration-300 animate-in fade-in slide-in-from-bottom-2 ${isUser ? "justify-end" : "justify-start"}`}
+                          >
+                            {!isUser && (
+                              <div className="shrink-0 h-8 w-8 rounded-full bg-linear-to-br from-[#F8F6F2] to-[#E6C27A]/20 text-[#D4A95A] flex items-center justify-center mt-1 shadow-sm ring-1 ring-[#E6C27A]/30">
+                                <Bot className="h-4 w-4" />
+                              </div>
+                            )}
+                            <div
+                              className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] shadow-sm ${isUser
+                                ? "bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-white rounded-tr-sm"
+                                : "bg-white border border-[#E6C27A]/10 text-slate-800 rounded-tl-sm"
+                                }`}
+                            >
+                              <p className="mt-0.5 whitespace-pre-wrap leading-relaxed">
+                                {entry.content}
+                              </p>
+                            </div>
+                            {isUser && (
+                              <div className="shrink-0 h-8 w-8 rounded-full bg-white text-slate-400 flex items-center justify-center mt-1 shadow-sm ring-1 ring-slate-200">
+                                <User className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {isChatLoading ? (
+                        <div className="flex justify-start gap-3 animate-in fade-in slide-in-from-bottom-2">
+                          <div className="shrink-0 h-8 w-8 rounded-full bg-linear-to-br from-[#F8F6F2] to-[#E6C27A]/20 text-[#D4A95A] flex items-center justify-center mt-1 shadow-sm ring-1 ring-[#E6C27A]/30">
+                            <Bot className="h-4 w-4" />
+                          </div>
+                          <div className="rounded-2xl rounded-tl-sm bg-white border border-[#E6C27A]/10 px-4 py-3 text-[14px] text-slate-500 shadow-sm flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 bg-[#D4A95A] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="h-1.5 w-1.5 bg-[#D4A95A] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="h-1.5 w-1.5 bg-[#D4A95A] rounded-full animate-bounce"></span>
                           </div>
                         </div>
-                      );
-                    })}
+                      ) : null}
+                    </div>
 
-                    {isChatLoading ? (
-                      <div className="flex justify-start">
-                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800 shadow-sm">
-                          AI is thinking...
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-3 space-y-2">
-                    <Textarea
-                      data-ai-design-chat-input="true"
-                      value={chatInput}
-                      onChange={(event) => setChatInput(event.target.value)}
-                      placeholder="Describe your ornament idea..."
-                      className="min-h-20 rounded-3xl border-slate-200 bg-white text-sm shadow-none"
-                    />
-
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="mt-3 shrink-0 flex items-center gap-2 bg-white rounded-full p-1 border border-slate-200 shadow-sm transition-all focus-within:border-[#D4A95A] focus-within:ring-2 focus-within:ring-[#E6C27A]/20">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         onClick={toggleVoiceInput}
-                        className="rounded-full border-amber-200"
+                        className={`h-10 w-10 shrink-0 rounded-full p-0 transition-all ${isListening ? "bg-rose-50 text-rose-500 animate-pulse relative" : "text-slate-400 hover:text-[#D4A95A] hover:bg-[#F8F6F2]"}`}
                       >
-                        {isListening ? (
-                          <MicOff className="h-4 w-4" />
-                        ) : (
-                          <Mic className="h-4 w-4" />
-                        )}
-                        {isListening ? "Stop Listening" : "Voice Input"}
+                        {isListening && <div className="absolute inset-0 rounded-full border-2 border-rose-500 animate-ping opacity-20"></div>}
+                        {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                       </Button>
-
+                      <input
+                        data-ai-design-chat-input="true"
+                        value={chatInput}
+                        onChange={(event) => setChatInput(event.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && chatInput.trim()) {
+                            void sendChatMessage();
+                          }
+                        }}
+                        placeholder="Ask the AI Concierge..."
+                        className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-slate-400"
+                      />
                       <Button
                         type="button"
                         onClick={() => void sendChatMessage()}
                         disabled={isChatLoading || !chatInput.trim()}
-                        className="rounded-full bg-slate-900 text-white hover:bg-slate-800"
+                        className="h-10 w-10 shrink-0 rounded-full p-0 bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-white transition-opacity hover:opacity-90 border-none shadow-sm disabled:opacity-50"
                       >
-                        <MessageCircle className="h-4 w-4" />
-                        Send
+                        <ArrowRight className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
-                </div>
-
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                  <p className="font-semibold text-slate-900">
-                    Final prompt from chat
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap leading-5">
-                    {chatPrompt ||
-                      "Keep chatting until assistant prepares a final prompt."}
-                  </p>
-                </div>
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+              </Tabs>
+            </div>
           )}
 
           <div className="flex flex-wrap items-center gap-3">
@@ -1352,7 +1473,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
               type="button"
               onClick={() => void handleGenerate()}
               disabled={!canGenerate}
-              className="rounded-full bg-slate-900 px-6 text-white shadow-sm transition-colors hover:bg-slate-800"
+              className="rounded-full bg-amber-600 px-6 text-white shadow-sm transition-colors hover:bg-amber-700"
             >
               {isGenerating ? (
                 <>
@@ -1384,67 +1505,109 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
         </CardContent>
       </Card>
 
-      <Card className="flex h-full min-h-0 min-w-0 flex-col rounded-[1.9rem] border-slate-200 bg-slate-50/80 shadow-[0_20px_50px_rgba(15,23,42,0.04)]">
-        <CardHeader className="px-6 py-5 md:px-8 md:py-6">
-          <CardTitle className="text-2xl text-slate-950">Preview</CardTitle>
+      <Card className="relative flex h-full min-h-0 min-w-0 flex-col rounded-[2rem] border-none bg-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.03)] backdrop-blur-2xl ring-1 ring-white">
+        <CardHeader className="px-6 py-5 md:px-8 md:py-6 shrink-0">
+          <CardTitle className="font-serif text-3xl font-medium tracking-wide text-[#0F172A]">Preview Studio</CardTitle>
           <CardDescription className="text-sm leading-6 text-slate-600">
-            {outputUrl
-              ? "Generated result"
-              : mode === "upload" && (sketchDataUrl || sketchUrl)
-                ? "Uploaded sketch"
-                : "Your visual will appear here"}
+            {isGenerating
+              ? "Synthesizing AI render..."
+              : outputUrl
+                ? "High-fidelity jewelry render"
+                : mode === "upload" && (sketchDataUrl || sketchUrl)
+                  ? "Analyzing uploaded sketch"
+                  : "Your design concept will appear here"}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 md:px-8 md:pb-8">
-          <div className="flex h-full min-h-90 w-full flex-1 flex-col items-center justify-center overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-center">
-            {previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={previewUrl}
-                alt={
-                  outputUrl
-                    ? "Generated jewelry visual"
-                    : "Uploaded sketch preview"
-                }
-                className="h-full max-h-105 w-full rounded-[1.2rem] object-contain"
-              />
+        <CardContent className="relative flex min-h-0 flex-1 flex-col px-6 pb-6 md:px-8 md:pb-8">
+          <div className="relative flex h-full min-h-0 w-full flex-1 flex-col items-center justify-center overflow-hidden rounded-[1.8rem] bg-linear-to-b from-[#F8F6F2] to-white/40 shadow-inner ring-1 ring-[#E6C27A]/20">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[1.8rem]">
+              <div className="absolute top-1/4 left-1/4 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E6C27A] opacity-[0.03] blur-3xl" />
+              <div className="absolute bottom-1/3 right-1/4 h-48 w-48 translate-x-1/3 translate-y-1/3 rounded-full bg-[#D4A95A] opacity-[0.03] blur-3xl" />
+            </div>
+
+            {isGenerating ? (
+              <div className="relative z-10 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-700">
+                <div className="relative flex h-32 w-32 items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-[3px] border-[#E6C27A]/10"></div>
+                  <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-[#D4A95A] border-r-[#E6C27A] animate-[spin_1.5s_linear_infinite]"></div>
+
+                  <div className="absolute inset-0 flex items-center justify-center animate-[spin_4s_linear_infinite_reverse]">
+                    <Sparkles className="h-8 w-8 text-[#D4A95A] opacity-80" />
+                  </div>
+
+                  <div className="absolute inset-y-0 h-full w-[2px] bg-linear-to-b from-transparent via-[#E6C27A]/40 to-transparent animate-[spin_3s_linear_infinite]" />
+                  <div className="absolute inset-x-0 w-full h-[2px] bg-linear-to-r from-transparent via-[#E6C27A]/40 to-transparent animate-[spin_3s_linear_infinite_reverse]" />
+                </div>
+
+                <h3 className="mt-8 font-serif text-xl font-medium text-[#0F172A] tracking-wide animate-pulse">
+                  Crafting your design...
+                </h3>
+                <p className="mt-2 text-sm text-[#D4A95A] font-semibold tracking-wider uppercase h-6 transition-all duration-300">
+                  {loadingStep === 0 && "Analyzing sketch..."}
+                  {loadingStep === 1 && "Refining geometry..."}
+                  {loadingStep === 2 && "Applying gold finish..."}
+                  {loadingStep === 3 && "Adding luxury lighting..."}
+                </p>
+              </div>
+            ) : previewUrl ? (
+              <div className="relative flex h-full w-full items-center justify-center p-4 animate-in fade-in duration-1000">
+                <div className="relative h-full w-full max-h-full max-w-full group perspective-1000">
+                  <div className="absolute bottom-4 left-1/2 h-4 w-3/4 -translate-x-1/2 rounded-[100%] bg-black/10 blur-xl transition-all duration-500 group-hover:bg-[#E6C27A]/20" />
+
+                  <img
+                    src={previewUrl}
+                    alt={outputUrl ? "Generated jewelry visual" : "Uploaded sketch preview"}
+                    className="relative z-10 h-full w-full rounded-[1.2rem] object-contain transition-transform duration-700 hover:scale-[1.02]"
+                  />
+
+                  <div className="absolute inset-0 z-20 pointer-events-none rounded-[1.2rem] bg-linear-to-tr from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                </div>
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-slate-100 text-slate-500">
+              <div className="relative z-10 flex flex-col items-center justify-center text-center animate-in fade-in duration-700">
+                <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white ring-1 ring-[#E6C27A]/20 text-[#D4A95A] shadow-[0_8px_30px_rgba(212,169,90,0.12)]">
                   {mode === "upload" ? (
-                    <ImageIcon className="h-7 w-7" />
+                    <ImageIcon className="h-8 w-8" />
                   ) : (
-                    <Sparkles className="h-7 w-7" />
+                    <Sparkles className="h-8 w-8" />
                   )}
                 </div>
-                <p className="mt-5 text-sm font-medium text-slate-700">
+                <p className="mt-6 font-serif text-lg text-slate-800">
                   {mode === "upload"
-                    ? "No preview yet"
-                    : "Nothing generated yet"}
+                    ? "Upload a sketch to preview"
+                    : "Your masterpiece awaits"}
+                </p>
+                <p className="mt-2 text-sm text-slate-500 max-w-[200px]">
+                  Fill out the details on the left and generate a visual.
                 </p>
               </div>
             )}
           </div>
 
-          <Button
-            type="button"
-            onClick={() => void handleSaveToCart()}
-            disabled={!canSave}
-            className="rounded-full bg-amber-500 px-6 text-white shadow-sm transition-colors hover:bg-amber-400 disabled:bg-amber-200"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="h-4 w-4" />
-                Add to Cart
-              </>
-            )}
-          </Button>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] md:w-[calc(100%-4rem)] z-50">
+            <Button
+              type="button"
+              onClick={() => void handleSaveToCart()}
+              disabled={!canSave || isGenerating}
+              className={`h-14 w-full rounded-2xl text-base font-semibold text-white shadow-[0_8px_20px_rgba(212,169,90,0.3)] transition-all duration-500 hover:shadow-[0_12px_25px_rgba(212,169,90,0.4)] hover:-translate-y-0.5 ${!canSave || isGenerating
+                ? "bg-slate-200 text-slate-400 shadow-none hover:shadow-none hover:translate-y-0"
+                : "bg-linear-to-r from-[#be8f31] to-[#D4A95A]"
+                }`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Securing...
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  Add to Collection
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
