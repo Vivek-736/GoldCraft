@@ -12,7 +12,6 @@ import {
   Sparkles,
   ZoomIn,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -183,6 +182,56 @@ function FinalAssistantMessage({ text }: { text: string }) {
   return <PlainAssistantMessage text={text} />;
 }
 
+function getSafeHtmlSlice(html: string, visibleLength: number) {
+  let htmlIndex = 0;
+  let textCount = 0;
+  const tagStack: string[] = [];
+  const len = html.length;
+
+  while (htmlIndex < len && textCount < visibleLength) {
+    if (html[htmlIndex] === "<") {
+      const isClosing = html[htmlIndex + 1] === "/";
+      const endTag = html.indexOf(">", htmlIndex);
+      if (endTag === -1) break;
+
+      const tagMatch = html
+        .slice(htmlIndex + (isClosing ? 2 : 1), endTag)
+        .match(/^[a-z0-9]+/i);
+      const tagName = tagMatch?.[0]?.toLowerCase();
+
+      if (tagName && tagName !== "br") {
+        if (isClosing) {
+          if (tagStack[tagStack.length - 1] === tagName) {
+            tagStack.pop();
+          }
+        } else {
+          tagStack.push(tagName);
+        }
+      }
+      htmlIndex = endTag + 1;
+    } else if (html[htmlIndex] === "&") {
+      const endEntity = html.indexOf(";", htmlIndex);
+      if (endEntity !== -1 && endEntity - htmlIndex < 10) {
+        htmlIndex = endEntity + 1;
+      } else {
+        htmlIndex++;
+      }
+      textCount++;
+    } else {
+      htmlIndex++;
+      textCount++;
+    }
+  }
+
+  let result = html.slice(0, htmlIndex);
+
+  for (let i = tagStack.length - 1; i >= 0; i--) {
+    result += `</${tagStack[i]}>`;
+  }
+
+  return result;
+}
+
 function AnimatedMessage({
   text,
   animate,
@@ -190,16 +239,19 @@ function AnimatedMessage({
   text: string;
   animate?: boolean;
 }) {
-  const plainText = stripFormattedContentForTyping(text);
+  const isHtml = isHtmlContent(text);
+  const displayContent = isHtml ? text : stripFormattedContentForTyping(text);
+  const plainTextForCount = stripFormattedContentForTyping(text);
+
   const [visibleLength, setVisibleLength] = useState(
-    animate ? 0 : plainText.length,
+    animate ? 0 : plainTextForCount.length,
   );
   const [isComplete, setIsComplete] = useState(!animate);
 
   useEffect(() => {
     if (!animate) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setVisibleLength(plainText.length);
+      setVisibleLength(plainTextForCount.length);
       setIsComplete(true);
       return;
     }
@@ -207,7 +259,7 @@ function AnimatedMessage({
     setVisibleLength(0);
     setIsComplete(false);
 
-    if (!plainText.length) {
+    if (!plainTextForCount.length) {
       setIsComplete(true);
       return;
     }
@@ -216,21 +268,31 @@ function AnimatedMessage({
       setVisibleLength((current) => {
         const next = current + 1;
 
-        if (next >= plainText.length) {
+        if (next >= plainTextForCount.length) {
           window.clearInterval(interval);
           setIsComplete(true);
-          return plainText.length;
+          return plainTextForCount.length;
         }
 
         return next;
       });
-    }, 22);
+    }, 18);
 
     return () => window.clearInterval(interval);
-  }, [animate, plainText]);
+  }, [animate, plainTextForCount]);
 
   if (!animate || isComplete) {
     return <FinalAssistantMessage text={text} />;
+  }
+
+  if (isHtml) {
+    const slicedHtml = getSafeHtmlSlice(text, visibleLength);
+    return (
+      <div className="relative">
+        <AssistantHtmlMessage html={slicedHtml} />
+        <span className="ml-1 inline-block h-5 w-[2px] animate-pulse rounded-full bg-amber-700 align-[-2px]" />
+      </div>
+    );
   }
 
   return (
@@ -238,7 +300,7 @@ function AnimatedMessage({
       className="whitespace-pre-wrap text-sm leading-7 text-slate-800 md:text-[15px]"
       aria-live="polite"
     >
-      {plainText.slice(0, visibleLength)}
+      {displayContent.slice(0, visibleLength)}
       <span className="ml-0.5 inline-block h-5 w-[2px] animate-pulse rounded-full bg-amber-700 align-[-2px]" />
     </p>
   );

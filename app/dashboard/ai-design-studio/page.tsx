@@ -42,16 +42,16 @@ export default async function AIDesignStudioPage() {
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <StudioChoiceCard
-            href="/ai-design-studio/upload"
-            title="Upload Your Sketch"
-            description="Start from a hand sketch, reference image, or concept board and guide the result with a few notes."
-            icon="upload"
-          />
-          <StudioChoiceCard
             href="/ai-design-studio/design"
             title="Design It Your Way"
             description="Describe the jewelry piece in your own words and shape a refined gold concept from prompts."
             icon="design"
+          />
+          <StudioChoiceCard
+            href="/ai-design-studio/upload"
+            title="Upload Your Sketch"
+            description="Start from a hand sketch, reference image, or concept board and guide the result with a few notes."
+            icon="upload"
           />
         </div>
       </div>
