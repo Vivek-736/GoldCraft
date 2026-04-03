@@ -5,7 +5,7 @@
     <strong>Elevate Your Vision with AI-Powered 3D Craftsmanship</strong>
   </p>
   <p>
-    <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js" alt="Next.js 15" />
+    <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" alt="Next.js 15" />
     <img src="https://img.shields.io/badge/Three.js-Customization-blue?style=for-the-badge&logo=three.js" alt="Three.js" />
     <img src="https://img.shields.io/badge/Clerk-Authentication-6C47FF?style=for-the-badge&logo=clerk" alt="Clerk Auth" />
     <img src="https://img.shields.io/badge/Tailwind-CSS_4-06B6D4?style=for-the-badge&logo=tailwind-css" alt="Tailwind CSS 4" />

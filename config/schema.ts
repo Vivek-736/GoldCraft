@@ -31,6 +31,19 @@ export const chatMessagesTable = pgTable("chat_messages", {
   createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 });
 
+export const goldTransactionsTable = pgTable("gold_transactions", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userEmail: varchar({ length: 255 }).notNull(),
+  type: varchar({ length: 10 }).notNull(),
+  grams: varchar({ length: 40 }).notNull(),
+  pricePerGram: integer().notNull(),
+  totalAmount: integer().notNull(),
+  status: varchar({ length: 20 }).notNull().default("PENDING"),
+  razorpayOrderId: varchar({ length: 255 }),
+  razorpayPaymentId: varchar({ length: 255 }),
+  createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+});
+
 export const aiDesignCartItemsTable = pgTable("ai_design_cart_items", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   userEmail: varchar({ length: 255 }).notNull(),
