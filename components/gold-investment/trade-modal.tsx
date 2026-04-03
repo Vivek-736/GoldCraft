@@ -6,7 +6,6 @@ import {
   Minus,
   ArrowRight,
   ShieldCheck,
-  Zap,
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
@@ -34,15 +33,9 @@ type TradeModalProps = {
   userGrams: number;
 };
 
-declare global {
-  interface Window {
-    // @ts-ignore
-    Razorpay: any;
-  }
-}
-
 export function TradeModal({ type, livePriceState, userGrams }: TradeModalProps) {
   const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
   const [grams, setGrams] = useState<string>("1");
   const [loading, setLoading] = useState(false);
@@ -100,8 +93,7 @@ export function TradeModal({ type, livePriceState, userGrams }: TradeModalProps)
           },
         };
 
-        // @ts-ignore
-        const rzp = new window.Razorpay(options);
+        const rzp = new (window as any).Razorpay(options);
         rzp.open();
       } else {
         const sellRes = await sellGold(numericGrams);

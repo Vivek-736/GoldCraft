@@ -11,17 +11,9 @@ type BuyCreditsDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => {
-      open: () => void;
-    };
-  }
-}
-
 async function loadRazorpayScript() {
   if (typeof window === "undefined") return false;
-  if (window.Razorpay) return true;
+  if ((window as any).Razorpay) return true;
   return new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -41,7 +33,7 @@ export function BuyCreditsDialog({ open, onOpenChange }: BuyCreditsDialogProps) 
       setIsProcessing(true);
       
       const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded || !window.Razorpay) {
+      if (!scriptLoaded || !(window as any).Razorpay) {
         alert("Failed to load payment gateway. Please check your connection.");
         setIsProcessing(false);
         return;
@@ -60,7 +52,7 @@ export function BuyCreditsDialog({ open, onOpenChange }: BuyCreditsDialogProps) 
         return;
       }
 
-      const razorpay = new window.Razorpay({
+      const razorpay = new (window as any).Razorpay({
         key: orderData.keyId,
         amount: orderData.order.amount,
         currency: orderData.order.currency,

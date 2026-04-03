@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { TrendingUp, Info, ShieldCheck, Activity } from "lucide-react";
+import { Info, ShieldCheck, Activity } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getLiveGoldPriceINR, getGoldHistoryINR } from "@/app/actions/gold-price";
@@ -23,7 +23,6 @@ export default async function InvestInGoldPage() {
   ]);
 
   const currentPrice = livePrice.success ? livePrice.gram : 0;
-
   // @ts-ignore
   const userGrams = userHoldings.success ? userHoldings.holdings.totalGrams : 0;
 
@@ -36,23 +35,16 @@ export default async function InvestInGoldPage() {
       <div className="space-y-8 pb-12">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="overflow-hidden border-amber-100/50 bg-white shadow-xl shadow-amber-900/5 transition-all hover:shadow-amber-900/10">
-              <CardHeader className="flex flex-row items-center justify-between border-b border-amber-50 bg-amber-50/20 px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-amber-600 p-2 text-white">
-                    <TrendingUp className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-bold text-slate-900">Market Performance</CardTitle>
-                    <CardDescription className="text-xs">Live 24K Gold Price (INR per Gram)</CardDescription>
-                  </div>
+            <Card className="overflow-hidden border-stone-200 bg-white shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between px-6 py-5">
+                <div>
+                  <CardTitle className="text-2xl font-serif text-slate-900 tracking-tight">Price History & Forecast (₹)</CardTitle>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-500">Live Price</p>
-                  <p className="text-xl font-black text-amber-600">₹{currentPrice?.toLocaleString()}</p>
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Last 30 Days + 7 Day Forecast</p>
                 </div>
               </CardHeader>
-              <CardContent className="p-6 md:p-8">
+              <CardContent className="p-6 md:p-8 pt-0">
                 {history.success && <MarketChart data={history.data} />}
               </CardContent>
             </Card>
