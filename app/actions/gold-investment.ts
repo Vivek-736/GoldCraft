@@ -66,7 +66,7 @@ export async function getUserGoldHoldings() {
   }
 }
 
-export async function createGoldPurchaseOrder(grams: number) {
+export async function createGoldPurchaseOrder(inrAmount: number) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
@@ -80,8 +80,9 @@ export async function createGoldPurchaseOrder(grams: number) {
       throw new Error("Unable to fetch live gold price");
     }
 
-    const pricePerGram = Math.round(livePrice.gram);
-    const totalAmount = Math.round(grams * pricePerGram);
+    const pricePerGram = livePrice.gram;
+    const totalAmount = Math.round(inrAmount);
+    const calculatedGrams = (totalAmount / pricePerGram).toFixed(6);
 
     const options = {
       amount: totalAmount * 100,
@@ -94,7 +95,7 @@ export async function createGoldPurchaseOrder(grams: number) {
     await db.insert(goldTransactionsTable).values({
       userEmail: email,
       type: "BUY",
-      grams: grams.toString(),
+      grams: calculatedGrams,
       pricePerGram,
       totalAmount,
       status: "PENDING",
@@ -145,7 +146,7 @@ export async function verifyGoldPurchase(
   }
 }
 
-export async function sellGold(grams: number) {
+export async function sellGold(inrAmount: number) {
   try {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
@@ -154,25 +155,26 @@ export async function sellGold(grams: number) {
     const email = user?.primaryEmailAddress?.emailAddress;
     if (!email) throw new Error("User email not found");
 
-    const currentData = await getUserGoldHoldings();
-    // @ts-ignore
-    if (!currentData.success || currentData.holdings.totalGrams < grams) {
-      throw new Error("Insufficient gold balance");
-    }
-
     const livePrice = await getLiveGoldPriceINR();
     if (!livePrice.success || !livePrice.gram) {
       throw new Error("Unable to fetch live gold price");
     }
 
-    const pricePerGram = Math.round(livePrice.gram);
-    const totalAmount = Math.round(grams * pricePerGram);
+    const pricePerGram = livePrice.gram;
+    const totalAmount = Math.round(inrAmount);
+    const calculatedGrams = (totalAmount / pricePerGram).toFixed(6);
+
+    const currentData = await getUserGoldHoldings();
+    // @ts-ignore
+    if (!currentData.success || currentData.holdings.totalGrams < parseFloat(calculatedGrams)) {
+      throw new Error(`Insufficient gold balance to sell ₹${totalAmount}`);
+    }
 
     await db.insert(goldTransactionsTable).values({
       userEmail: email,
       type: "SELL",
-      grams: grams.toString(),
-      pricePerGram,
+      grams: calculatedGrams,
+      pricePerGram: Math.round(pricePerGram),
       totalAmount,
       status: "COMPLETED",
     });
