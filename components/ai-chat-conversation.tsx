@@ -11,6 +11,10 @@ import {
   Search,
   Sparkles,
   ZoomIn,
+  Mic,
+  Volume2,
+  Languages,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,9 +40,12 @@ export type ChatMessageView = {
 type ChatInputProps = {
   value: string;
   onChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (overrideValue?: string) => void;
   isSending: boolean;
   hasStartedChat: boolean;
+  interactionMode: "chat" | "voice";
+  setInteractionMode: (mode: "chat" | "voice") => void;
+  selectedLang: typeof LANGUAGES[0];
 };
 
 type ChatMessagesProps = {
@@ -46,7 +53,16 @@ type ChatMessagesProps = {
   isSending: boolean;
   onSelectImage: (image: string) => void;
   endRef: React.RefObject<HTMLDivElement | null>;
+  selectedLang: typeof LANGUAGES[0];
 };
+
+const LANGUAGES = [
+  { label: "English (US)", value: "en-US", voice: "en-US-Standard-C" },
+  { label: "Hindi (India)", value: "hi-IN", voice: "hi-IN-Standard-A" },
+  { label: "Telugu (India)", value: "te-IN", voice: "te-IN-Standard-A" },
+  { label: "Tamil (India)", value: "ta-IN", voice: "ta-IN-Standard-A" },
+  { label: "Marathi (India)", value: "mr-IN", voice: "mr-IN-Standard-A" },
+];
 
 function isHtmlContent(text: string) {
   return /<\/?[a-z][\s\S]*>/i.test(text);
@@ -312,13 +328,58 @@ function ChatInput({
   onSubmit,
   isSending,
   hasStartedChat,
+  interactionMode,
+  setInteractionMode,
+  selectedLang,
 }: ChatInputProps) {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support voice input.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = selectedLang.value;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const current = event.resultIndex;
+      const transcript = event.results[current][0].transcript;
+      onChange(transcript);
+    };
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      if (interactionMode === "voice" && value.trim()) {
+        onSubmit(value.trim());
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   return (
     <motion.div
       layout
       transition={{ type: "spring", stiffness: 240, damping: 28 }}
       className={cn(
-        "w-full rounded-[1.9rem] border border-amber-100 bg-white/96 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur md:px-5 md:py-3.5",
+        "w-full rounded-[1.9rem] border border-amber-100 bg-white/96 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur md:px-5 md:py-3.5 flex flex-col gap-2",
         hasStartedChat ? "max-w-5xl" : "max-w-3xl",
       )}
     >
@@ -326,7 +387,7 @@ function ChatInput({
         <Textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Ask GoldCraft AI about gold, markets, design inspiration, news, startups, images, or developer trends..."
+          placeholder={interactionMode === "voice" ? "Tap the microphone and speak..." : "Ask GoldCraft AI about gold, markets, design inspiration, news..."}
           className="min-h-[56px] max-h-32 flex-1 resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus-visible:ring-0"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
@@ -335,8 +396,26 @@ function ChatInput({
             }
           }}
         />
+        {interactionMode === "voice" && (
+          <Button
+            type="button"
+            onClick={toggleListening}
+            variant="outline"
+            className={cn(
+              "h-11 shrink-0 rounded-full px-4 border shadow-sm transition-colors", 
+              isListening ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 font-semibold" : "bg-white text-slate-600 hover:bg-slate-50 hover:text-amber-700 border-slate-200"
+            )}
+          >
+            {isListening ? (
+              <>
+                <div className="mr-2 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                Listening
+              </>
+            ) : <Mic className="h-5 w-5" />}
+          </Button>
+        )}
         <Button
-          onClick={onSubmit}
+          onClick={() => onSubmit()}
           disabled={isSending || !value.trim()}
           className="h-11 shrink-0 rounded-full bg-amber-800 px-4 text-white hover:bg-amber-900"
         >
@@ -344,7 +423,7 @@ function ChatInput({
           <span className="sr-only">Send</span>
         </Button>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3">
+      <div className="mt-1 flex items-center justify-between gap-3">
         <p className="text-[11px] leading-5 text-slate-500">
           Enter sends. Shift + Enter creates a new line.
         </p>
@@ -358,7 +437,34 @@ function ChatMessages({
   isSending,
   onSelectImage,
   endRef,
+  selectedLang,
 }: ChatMessagesProps) {
+  const [isPlayingId, setIsPlayingId] = useState<number | null>(null);
+
+  const playTTS = async (text: string, id: number, languageCode: string, voiceName: string) => {
+    setIsPlayingId(id);
+    try {
+      const ttsRes = await axios.post("/api/tts", { 
+        text: stripFormattedContentForTyping(text),
+        languageCode,
+        voiceName
+      });
+      if (ttsRes.data.audioContent) {
+        const audio = new Audio("data:audio/mp3;base64," + ttsRes.data.audioContent);
+        audio.onended = () => setIsPlayingId(null);
+        audio.play().catch(e => {
+          console.error("Manual playback failed", e);
+          setIsPlayingId(null);
+        });
+      } else {
+        setIsPlayingId(null);
+      }
+    } catch (err) {
+      console.error("TTS failed", err);
+      setIsPlayingId(null);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -388,9 +494,19 @@ function ChatMessages({
                 )}
               >
                 {isAssistant && hasContent ? (
-                  <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    GoldCraft Curated
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      GoldCraft Curated
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn("h-7 w-7 rounded-full text-amber-700 hover:bg-amber-100/50 hover:text-amber-800 transition-colors", isPlayingId === message.id && "animate-pulse bg-amber-100")}
+                      onClick={() => playTTS(message.content, message.id, selectedLang.value, selectedLang.voice)}
+                    >
+                      <Volume2 className={cn("h-3.5 w-3.5", isPlayingId === message.id && "fill-amber-700")} />
+                    </Button>
                   </div>
                 ) : null}
 
@@ -421,7 +537,6 @@ function ChatMessages({
                           onClick={() => onSelectImage(image)}
                           className="group relative overflow-hidden rounded-[1.5rem] border border-amber-100 bg-amber-50/40 text-left shadow-sm transition-colors hover:border-amber-300"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={image}
                             alt="Chat response visual"
@@ -504,6 +619,8 @@ function ChatPage({
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [interactionMode, setInteractionMode] = useState<"chat" | "voice">("chat");
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -512,8 +629,8 @@ function ChatPage({
     }
   }, [messages, isSending, hasStartedChat]);
 
-  const handleSubmit = async () => {
-    const value = input.trim();
+  const handleSubmit = async (overrideValue?: string) => {
+    const value = (overrideValue ?? input).trim();
 
     if (!value || isSending) {
       return;
@@ -552,7 +669,29 @@ function ChatPage({
           animate: shouldAnimate,
         },
       ]);
-    } catch {
+
+      if (interactionMode === "voice" && assistantMessage.content) {
+        // Find the unique ID from messages or use a temp one
+        try {
+          const ttsRes = await axios.post("/api/tts", { 
+            text: stripFormattedContentForTyping(assistantMessage.content),
+            languageCode: selectedLang.value,
+            voiceName: selectedLang.voice
+          });
+          if (ttsRes.data.audioContent) {
+            const audioSrc = "data:audio/mp3;base64," + ttsRes.data.audioContent;
+            const audio = new Audio(audioSrc);
+            
+            audio.play().catch(e => {
+              console.warn("Auto-playback blocked. User must interact.", e);
+            });
+          }
+        } catch (err) {
+          console.error("Background TTS play failed", err);
+        }
+      }
+    } catch (err) {
+      console.error("Submit error", err);
       setMessages((current) => [
         ...current,
         {
@@ -573,6 +712,56 @@ function ChatPage({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-4">
+        {/* Chat Control Header */}
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-100 bg-white/90 text-sm text-slate-700 shadow-sm cursor-pointer hover:border-amber-200 transition-colors">
+                <Languages className="h-4 w-4 text-amber-700" />
+                <span className="font-medium text-xs">{selectedLang.label}</span>
+                <ChevronDown className="h-3 w-3 text-slate-400" />
+              </div>
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-amber-50 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
+                {LANGUAGES.map((lang) => (
+                  <button 
+                    key={lang.value}
+                    onClick={() => setSelectedLang(lang)}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-amber-50 transition-colors",
+                      selectedLang.value === lang.value ? "text-amber-700 bg-amber-50/50" : "text-slate-600"
+                    )}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex bg-slate-100/80 backdrop-blur rounded-full p-[3px] border border-slate-200/50 shadow-sm">
+            <button 
+              type="button"
+              onClick={() => setInteractionMode("chat")}
+              className={cn(
+                "px-4 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full transition-all duration-300", 
+                interactionMode === "chat" ? "bg-white shadow-sm text-slate-900" : "text-slate-400 hover:text-slate-600"
+              )}
+            >
+              Chat
+            </button>
+            <button 
+              type="button"
+              onClick={() => setInteractionMode("voice")}
+              className={cn(
+                "px-4 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full transition-all duration-300", 
+                interactionMode === "voice" ? "bg-white shadow-[0_0_10px_rgba(212,169,90,0.1)] text-amber-700 border border-amber-100" : "text-slate-400 hover:text-slate-600"
+              )}
+            >
+              Voice
+            </button>
+          </div>
+        </div>
+
         <motion.div
           layout
           transition={{ type: "spring", stiffness: 220, damping: 30 }}
@@ -609,6 +798,7 @@ function ChatPage({
                 isSending={isSending}
                 onSelectImage={setSelectedImage}
                 endRef={endRef}
+                selectedLang={selectedLang}
               />
             ) : null}
           </AnimatePresence>
@@ -624,11 +814,13 @@ function ChatPage({
               onSubmit={handleSubmit}
               isSending={isSending}
               hasStartedChat={hasStartedChat}
+              interactionMode={interactionMode}
+              setInteractionMode={setInteractionMode}
+              selectedLang={selectedLang}
             />
           </motion.div>
         </motion.div>
       </div>
-
       <Dialog
         open={Boolean(selectedImage)}
         onOpenChange={(open) => {

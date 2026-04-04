@@ -23,9 +23,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const payload = (await request.json()) as TtsPayload;
+    const payload = (await request.json()) as TtsPayload & { voiceName?: string };
     const text = String(payload.text ?? "").trim();
     const languageCode = String(payload.languageCode ?? "en-US").trim() || "en-US";
+    const voiceName = String(payload.voiceName ?? "").trim();
 
     if (!text) {
       return NextResponse.json({ error: "Text is required." }, { status: 400 });
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
           },
           voice: {
             languageCode,
+            name: voiceName || undefined,
             ssmlGender: "FEMALE",
           },
           audioConfig: {

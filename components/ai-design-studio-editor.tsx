@@ -32,6 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Input } from "./ui/input";
+import { cn } from "@/lib/utils";
 
 type AIDesignStudioEditorProps = {
   mode: "upload" | "design";
@@ -92,6 +93,7 @@ type SpeechRecognitionType = {
   }) => void)
   | null;
   onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
 };
 
 type BrowserWindowWithSpeech = Window & {
@@ -141,16 +143,28 @@ function buildBasePrompt({
   ].join(" ");
 }
 
+const STUDIO_LANGUAGES = [
+  { label: "English", value: "en-US", voice: "en-US-Standard-C" },
+  { label: "Hindi", value: "hi-IN", voice: "hi-IN-Standard-A" },
+  { label: "Telugu", value: "te-IN", voice: "te-IN-Standard-A" },
+  { label: "Tamil", value: "ta-IN", voice: "ta-IN-Standard-A" },
+];
+
 function languageToCode(language: string) {
   const normalized = language.toLowerCase();
 
-  if (normalized.includes("hindi")) return "hi-IN";
-  if (normalized.includes("telugu")) return "te-IN";
-  if (normalized.includes("tamil")) return "ta-IN";
-  if (normalized.includes("kannada")) return "kn-IN";
-  if (normalized.includes("malayalam")) return "ml-IN";
+  const found = STUDIO_LANGUAGES.find(l => l.label.toLowerCase() === normalized);
+  if (found) return found.value;
 
   return "en-US";
+}
+
+function languageToVoice(language: string) {
+  const normalized = language.toLowerCase();
+  const found = STUDIO_LANGUAGES.find(l => l.label.toLowerCase() === normalized);
+  if (found) return found.voice;
+
+  return "en-US-Standard-C";
 }
 
 const JEWELRY_KEYWORDS = [
@@ -918,12 +932,13 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
   async function speakAssistant(text: string) {
     try {
-      const response = await fetch("/api/ai-design-studio/tts", {
+      const response = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text,
           languageCode: languageToCode(chatLanguage),
+          voiceName: languageToVoice(chatLanguage)
         }),
       });
 
@@ -1030,13 +1045,30 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
 
       recognition.onresult = (event) => {
         const transcript = event.results[0]?.[0]?.transcript ?? "";
-        setChatInput((current) =>
-          current ? `${current} ${transcript}`.trim() : transcript,
-        );
+        setChatInput((current) => {
+          const updatedValue = current ? `${current} ${transcript}`.trim() : transcript;
+          return updatedValue;
+        });
+
+        // If in voice mode, auto-submit when the transcription is received
+        // Note: we can't easily wait for more results without keeping recognition alive
       };
 
       recognition.onerror = () => {
         setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        // After voice ends, if we have content and are in voice mode, auto-click submit
+        // However, we rely on the latest state. To avoid race conditions, we can use a DOM-level trigger
+        // or ensure our message is processed.
+        const chatInputElement = document.querySelector<HTMLInputElement>(
+          'input[data-ai-design-chat-input="true"]',
+        );
+        if (isVoiceMode && chatInputElement && chatInputElement.value.trim()) {
+           void sendChatMessage();
+        }
       };
 
       speechRecognitionRef.current = recognition;
@@ -1360,18 +1392,40 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                       </p>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                        <div className="flex bg-slate-100/80 rounded-full p-[2px] border border-slate-200 shadow-xs mr-1">
+                          <button 
+                            type="button" 
+                            onClick={() => setIsVoiceMode(false)}
+                            className={cn(
+                              "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all duration-300",
+                              !isVoiceMode ? "bg-white shadow-xs text-[#D4A95A]" : "text-slate-400 hover:text-slate-600"
+                            )}
+                          >
+                            Chat
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setIsVoiceMode(true)}
+                            className={cn(
+                              "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all duration-300",
+                              isVoiceMode ? "bg-white shadow-xs text-[#D4A95A]" : "text-slate-400 hover:text-slate-600"
+                            )}
+                          >
+                            Voice
+                          </button>
+                        </div>
+
+                        <label className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#E6C27A]">
                           <Languages className="h-3 w-3 text-[#D4A95A]" />
                           <select
                             value={chatLanguage}
                             onChange={(event) => setChatLanguage(event.target.value)}
                             aria-label="Chat language"
-                            className="bg-transparent text-xs outline-none"
+                            className="bg-transparent text-xs font-medium outline-none cursor-pointer"
                           >
-                            <option>English</option>
-                            <option>Hindi</option>
-                            <option>Telugu</option>
-                            <option>Tamil</option>
+                            {STUDIO_LANGUAGES.map(lang => (
+                              <option key={lang.value}>{lang.label}</option>
+                            ))}
                           </select>
                         </label>
                       </div>
@@ -1446,7 +1500,7 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
                             void sendChatMessage();
                           }
                         }}
-                        placeholder="Ask the AI Concierge..."
+                        placeholder={isVoiceMode ? "Tap microphone and speak..." : "Ask the AI Concierge..."}
                         className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-slate-400"
                       />
                       <Button
@@ -1584,7 +1638,6 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
               </div>
             )}
           </div>
-
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] md:w-[calc(100%-4rem)] z-50">
             <Button
               type="button"
