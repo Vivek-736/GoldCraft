@@ -14,7 +14,6 @@ import {
   Mic,
   Volume2,
   Languages,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,10 +57,6 @@ type ChatMessagesProps = {
 
 const LANGUAGES = [
   { label: "English (US)", value: "en-US", voice: "en-US-Standard-C" },
-  { label: "Hindi (India)", value: "hi-IN", voice: "hi-IN-Standard-A" },
-  { label: "Telugu (India)", value: "te-IN", voice: "te-IN-Standard-A" },
-  { label: "Tamil (India)", value: "ta-IN", voice: "ta-IN-Standard-A" },
-  { label: "Marathi (India)", value: "mr-IN", voice: "mr-IN-Standard-A" },
 ];
 
 function isHtmlContent(text: string) {
@@ -266,7 +261,6 @@ function AnimatedMessage({
 
   useEffect(() => {
     if (!animate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisibleLength(plainTextForCount.length);
       setIsComplete(true);
       return;
@@ -329,7 +323,6 @@ function ChatInput({
   isSending,
   hasStartedChat,
   interactionMode,
-  setInteractionMode,
   selectedLang,
 }: ChatInputProps) {
   const [isListening, setIsListening] = useState(false);
@@ -671,7 +664,6 @@ function ChatPage({
       ]);
 
       if (interactionMode === "voice" && assistantMessage.content) {
-        // Find the unique ID from messages or use a temp one
         try {
           const ttsRes = await axios.post("/api/tts", { 
             text: stripFormattedContentForTyping(assistantMessage.content),
@@ -712,28 +704,12 @@ function ChatPage({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden px-3 pb-3 pt-3 md:px-6 md:pb-5 md:pt-4">
-        {/* Chat Control Header */}
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <div className="relative group">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-100 bg-white/90 text-sm text-slate-700 shadow-sm cursor-pointer hover:border-amber-200 transition-colors">
                 <Languages className="h-4 w-4 text-amber-700" />
                 <span className="font-medium text-xs">{selectedLang.label}</span>
-                <ChevronDown className="h-3 w-3 text-slate-400" />
-              </div>
-              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-amber-50 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden">
-                {LANGUAGES.map((lang) => (
-                  <button 
-                    key={lang.value}
-                    onClick={() => setSelectedLang(lang)}
-                    className={cn(
-                      "w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-amber-50 transition-colors",
-                      selectedLang.value === lang.value ? "text-amber-700 bg-amber-50/50" : "text-slate-600"
-                    )}
-                  >
-                    {lang.label}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
@@ -790,7 +766,6 @@ function ChatPage({
               </p>
             </motion.div>
           ) : null}
-
           <AnimatePresence initial={false}>
             {hasStartedChat ? (
               <ChatMessages
@@ -821,6 +796,7 @@ function ChatPage({
           </motion.div>
         </motion.div>
       </div>
+
       <Dialog
         open={Boolean(selectedImage)}
         onOpenChange={(open) => {
