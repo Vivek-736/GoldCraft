@@ -101,7 +101,7 @@ export function TradeModal({ type, livePriceState, userGrams }: TradeModalProps)
       } else {
         const sellRes = await sellGold(numericInr);
         if (sellRes.success) {
-          toast.success(`Successfully liquidated ≈ ${calculatedGrams}g. ₹${numericInr.toLocaleString('en-IN')} has been credited.`);
+          toast.success(`Successfully sold ≈ ${calculatedGrams}g. ₹${numericInr.toLocaleString('en-IN')} has been credited.`);
           setIsOpen(false);
           router.refresh();
         } else {
@@ -125,12 +125,12 @@ export function TradeModal({ type, livePriceState, userGrams }: TradeModalProps)
             className={cn(
               "h-12 w-full cursor-pointer gap-2 rounded-2xl font-semibold shadow-[0_8px_20px_rgba(212,169,90,0.15)] transition-all",
               type === "BUY"
-                ? "bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-slate-950 hover:brightness-105 border-0 hover:-translate-y-0.5"
-                : "border border-amber-200 bg-white/50 backdrop-blur text-amber-600 hover:bg-white hover:border-amber-300 hover:-translate-y-0.5"
+                ? "bg-linear-to-r from-[#E6C27A] to-[#D4A95A] text-slate-950 hover:brightness-105 border-0"
+                : "border border-amber-200 bg-white/50 backdrop-blur text-amber-600 hover:bg-white hover:border-amber-300"
             )}
           >
             {type === "BUY" ? <Plus className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-            {type === "BUY" ? "Invest Now" : "Liquidate"}
+            {type === "BUY" ? "Invest Now" : "Sell Now"}
           </Button>
         </DialogTrigger>
 
@@ -140,7 +140,7 @@ export function TradeModal({ type, livePriceState, userGrams }: TradeModalProps)
           <div className="px-6 py-6 border-b border-slate-100 relative z-10">
             <DialogHeader>
               <DialogTitle className="text-xl font-serif text-slate-900 tracking-tight flex items-center gap-2">
-                {type === "BUY" ? "Start Investment" : "Liquidate Assets"}
+                {type === "BUY" ? "Start Investment" : "Sell Assets"}
               </DialogTitle>
               <p className="text-slate-500 text-xs mt-1 font-medium">99.9% 24K Pure Digital Gold</p>
             </DialogHeader>
