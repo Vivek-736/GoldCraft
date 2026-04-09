@@ -13,6 +13,7 @@
     "@clerk/themes": "^2.4.52",
     "@heyputer/puter.js": "^2.2.12",
     "@mediapipe/hands": "^0.4.1675469240",
+    "@mediapipe/pose": "^0.5.1675469404",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",

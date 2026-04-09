@@ -22,8 +22,6 @@ export function HeroSection() {
   const leftColRef = useRef<HTMLDivElement>(null);
   const rightColRef = useRef<HTMLDivElement>(null);
   const [stoneColor, setStoneColor] = useState("#ff0000");
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
   const router = useRouter();
   const stoneMaterialRef = useRef<any>(null);
   const originalPixelDataRef = useRef<{ data: Uint8ClampedArray; w: number; h: number } | null>(null);
@@ -36,9 +34,8 @@ export function HeroSection() {
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
 
-    let isRendering = true;
     let requestID: number;
-
+    let isRendering = true;
     const ctx = gsap.context(() => {
       const scene = new THREE.Scene();
 
@@ -62,7 +59,7 @@ export function HeroSection() {
         canvasRef.current!.clientWidth,
         canvasRef.current!.clientHeight,
       );
-
+      
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.5;
       renderer.shadowMap.enabled = true;
@@ -102,25 +99,14 @@ export function HeroSection() {
 
       const loader = new GLTFLoader();
       let model: THREE.Group | null = null;
+      // eslint-disable-next-line prefer-const
       let mixer: THREE.AnimationMixer | null = null;
-
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev < 95) return prev + 1;
-          return prev;
-        });
-      }, 150);
 
       loader.load(
         "/ring.glb",
         (gltf) => {
-          clearInterval(progressInterval);
-          setProgress(100);
-          setTimeout(() => {
-            setLoading(false);
-          }, 300);
-
           model = gltf.scene;
+
           const box = new THREE.Box3().setFromObject(model);
           const center = box.getCenter(new THREE.Vector3());
           const size = box.getSize(new THREE.Vector3());
@@ -164,7 +150,6 @@ export function HeroSection() {
               }
             }
           });
-          setLoading(false);
           scene.add(model);
           model.scale.set(0, 0, 0);
           gsap.to(model.scale, {
@@ -175,17 +160,9 @@ export function HeroSection() {
             ease: "back.out(1.7)",
           });
         },
-        (xhr) => {
-          if (xhr.total > 0) {
-            const p = Math.round((xhr.loaded / xhr.total) * 100);
-            setProgress((prev) => Math.max(prev, p));
-          }
-        },
+        undefined,
         (error) => {
-          clearInterval(progressInterval);
           console.error("An error occurred loading the GLB:", error);
-          setProgress(100);
-          setLoading(false);
         },
       );
 
@@ -256,7 +233,6 @@ export function HeroSection() {
         );
 
       return () => {
-        clearInterval(progressInterval);
         observer.disconnect();
         window.removeEventListener("resize", handleResize);
         cancelAnimationFrame(requestID);
@@ -379,46 +355,8 @@ export function HeroSection() {
 
           <div
             ref={containerRef}
-            className="order-1 md:order-0 md:col-span-6 h-100 md:h-150 relative w-full -mt-6 flex items-center justify-center"
+            className="order-1 md:order-0 md:col-span-6 h-100 md:h-150 relative w-full -mt-6"
           >
-            {loading && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center transition-opacity duration-1000">
-                <div className="relative w-32 h-32">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="58"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      fill="transparent"
-                      className="text-emerald-50"
-                    />
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="58"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="transparent"
-                      strokeDasharray={364.4}
-                      strokeDashoffset={364.4 - (364.4 * progress) / 100}
-                      strokeLinecap="round"
-                      className="text-emerald-500 transition-all duration-500 ease-out"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-serif text-emerald-900 drop-shadow-sm">{progress}%</span>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-col items-center">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-800 animate-pulse">
-                    Crafting your piece
-                  </p>
-                  <div className="h-px w-12 bg-emerald-200 mt-2" />
-                </div>
-              </div>
-            )}
             <canvas
               ref={canvasRef}
               className="w-full h-full outline-none cursor-grab active:cursor-grabbing"
