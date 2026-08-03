@@ -550,10 +550,6 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
   async function puterTextToText(promptText: string) {
     const { default: puter } = await import("@heyputer/puter.js");
 
-    if (!puter.auth.isSignedIn()) {
-      await puter.auth.signIn();
-    }
-
     const response = await puter.ai.chat(promptText, {
       model: "gemini-2.5-flash",
     });
@@ -666,10 +662,6 @@ export function AIDesignStudioEditor({ mode }: AIDesignStudioEditorProps) {
     sketchImageSource: string,
   ) {
     const { default: puter } = await import("@heyputer/puter.js");
-
-    if (!puter.auth.isSignedIn()) {
-      await puter.auth.signIn();
-    }
 
     if (!sketchImageSource.trim()) {
       throw new Error("Upload a sketch before generating.");
